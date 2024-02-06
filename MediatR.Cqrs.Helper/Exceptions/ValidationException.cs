@@ -2,7 +2,11 @@ using MediatR.Cqrs.Helper.Models;
 
 namespace MediatR.Cqrs.Helper.Exceptions;
 
-public sealed class ValidationException : Exception
+/// <summary>
+/// An <see cref="Exception"/> to throw when some validation  fails in a CQRS request pipeline
+/// </summary>
+public sealed class ValidationException 
+    : Exception
 {
     public ValidationException(IEnumerable<ValidationError> errors)
     {

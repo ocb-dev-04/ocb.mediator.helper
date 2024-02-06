@@ -5,12 +5,21 @@ using MediatR.Cqrs.Helper.Abstractions.Messaging;
 
 namespace MediatR.Cqrs.Helper.Abstractions.Behaviors;
 
+/// <summary>
+/// <see cref="IPipelineBehavior{TRequest, TResponse}"/> to include validation in the request pipeline.
+/// </summary>
+/// <typeparam name="TRequest"></typeparam>
+/// <typeparam name="TResponse"></typeparam>
 public class ValidationBehavior<TRequest, TResponse>
     : IPipelineBehavior<TRequest, TResponse>
         where TRequest : IBaseCommand
 {
     private readonly IEnumerable<IValidator<TRequest>> _validators;
 
+    /// <summary>
+    /// <see cref="ValidationBehavior"/> public constructor
+    /// </summary>
+    /// <param name="validators"></param>
     public ValidationBehavior(IEnumerable<IValidator<TRequest>> validators)
     {
         _validators = validators;
