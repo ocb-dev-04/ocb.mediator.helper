@@ -1,0 +1,89 @@
+name: Build and Deploy
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+jobs:
+  build:
+    name: Build Package 
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository 
+        uses: actions/checkout@v4
+        
+      - name: Set up .NET Core 
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+          
+      - name: Give access to provate nugets
+        run: dotnet nuget add source --username ocb-dev-04 --password ${{ secrets.NUGET_AUTH_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/ocb-dev-04/index.json"
+          
+      - name: Build
+        run: dotnet build --configuration Release
+        
+      - name: Package
+        run: >
+          dotnet pack --no-restore --no-build --configuration Release -p:PackageVersion=${{ github.ref_name}} --output .
+          
+      - name: Publish
+        run: >
+          dotnet nuget push MediatR.Cqrs.Helper.${{ github.ref_name}}.nupkg -s https://nuget.pkg.github.com/ocb-dev-04/index.json -k ${{ secrets.NUGET_AUTH_TOKEN }}
+
+# name: Build and Deploy
+
+# on:
+#   push:
+#     tags:
+#       - '*.*.*'
+
+# jobs:
+#   checkout:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout Repository 
+#         uses: actions/checkout@v4
+
+#   setup-dotnet:
+#     runs-on: ubuntu-latest
+#     needs: checkout
+#     steps:
+#       - name: Set up .NET Core 
+#         uses: actions/setup-dotnet@v4
+#         with:
+#           dotnet-version: '8.x'
+
+#   give-access:
+#     runs-on: ubuntu-latest
+#     needs: setup-dotnet
+#     steps:
+#       - name: Give access to private NuGet packages
+#         run: dotnet nuget add source --username ocb-dev-04 --password ${{ secrets.NUGET_AUTH_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/ocb-dev-04/index.json"
+
+#   build:
+#     runs-on: ubuntu-latest
+#     needs: [give-access, setup-dotnet]
+#     steps:
+#       - name: Set working directory
+#         run: cd $GITHUB_WORKSPACE 
+
+#       - name: Build
+#         run: dotnet build --configuration Release
+
+#   package:
+#     runs-on: ubuntu-latest
+#     needs: build
+#     steps:
+#       - name: Package
+#         run: >
+#           dotnet pack --no-restore --no-build --configuration Release -p:PackageVersion=${{ github.ref_name}} --output .
+
+#   publish:
+#     runs-on: ubuntu-latest
+#     needs: package
+#     steps:
+#       - name: Publish
+#         run: >
+#           dotnet nuget push Value.Objects.Helper.${{ github.ref_name}}.nupkg -s https://nuget.pkg.github.com/ocb-dev-04/index.json -k ${{ secrets.NUGET_AUTH_TOKEN }}
