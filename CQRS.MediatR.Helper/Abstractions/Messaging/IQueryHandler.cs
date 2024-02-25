@@ -1,4 +1,5 @@
-﻿using Shared.Common.Helper.ErrorsHandler;
+﻿using MediatR;
+using Shared.Common.Helper.ErrorsHandler;
 
 namespace CQRS.MediatR.Helper.Abstractions.Messaging;
 

@@ -2,6 +2,7 @@
 
 using CQRS.MediatR.Helper.Models;
 using CQRS.MediatR.Helper.Abstractions.Messaging;
+using MediatR;
 
 namespace CQRS.MediatR.Helper.Abstractions.Behaviors;
 
