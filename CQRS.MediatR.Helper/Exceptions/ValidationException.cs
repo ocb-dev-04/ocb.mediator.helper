@@ -1,6 +1,6 @@
-using MediatR.Cqrs.Helper.Models;
+using CQRS.MediatR.Helper.Models;
 
-namespace MediatR.Cqrs.Helper.Exceptions;
+namespace CQRS.MediatR.Helper.Exceptions;
 
 /// <summary>
 /// An <see cref="Exception"/> to throw when some validation  fails in a CQRS request pipeline

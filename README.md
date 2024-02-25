@@ -1,2 +1,2 @@
-# mediatr.cqrs.helper
+# CQRS.MediatR.helper
 A nuget with common conde to apply CQRS using MediatR

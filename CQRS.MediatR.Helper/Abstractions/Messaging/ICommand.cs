@@ -1,6 +1,6 @@
 ﻿using Shared.Common.Helper.ErrorsHandler;
 
-namespace MediatR.Cqrs.Helper.Abstractions.Messaging;
+namespace CQRS.MediatR.Helper.Abstractions.Messaging;
 
 /// <summary>
 /// An <see cref="ICommand"/> to use when endpoint doesn't return value

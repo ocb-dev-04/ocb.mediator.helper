@@ -1,9 +1,9 @@
 ﻿using FluentValidation;
 
-using MediatR.Cqrs.Helper.Models;
-using MediatR.Cqrs.Helper.Abstractions.Messaging;
+using CQRS.MediatR.Helper.Models;
+using CQRS.MediatR.Helper.Abstractions.Messaging;
 
-namespace MediatR.Cqrs.Helper.Abstractions.Behaviors;
+namespace CQRS.MediatR.Helper.Abstractions.Behaviors;
 
 /// <summary>
 /// <see cref="IPipelineBehavior{TRequest, TResponse}"/> to include validation in the request pipeline.

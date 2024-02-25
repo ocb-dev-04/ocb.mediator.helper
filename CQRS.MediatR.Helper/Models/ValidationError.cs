@@ -1,4 +1,4 @@
-namespace MediatR.Cqrs.Helper.Models;
+namespace CQRS.MediatR.Helper.Models;
 
 /// <summary>
 /// Model to create validation errors objects
