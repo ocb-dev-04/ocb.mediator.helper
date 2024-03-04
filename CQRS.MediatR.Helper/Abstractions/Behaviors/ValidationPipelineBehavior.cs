@@ -1,8 +1,8 @@
-﻿using FluentValidation;
+﻿using MediatR;
+using FluentValidation;
 
 using CQRS.MediatR.Helper.Models;
 using CQRS.MediatR.Helper.Abstractions.Messaging;
-using MediatR;
 
 namespace CQRS.MediatR.Helper.Abstractions.Behaviors;
 
@@ -11,17 +11,17 @@ namespace CQRS.MediatR.Helper.Abstractions.Behaviors;
 /// </summary>
 /// <typeparam name="TRequest"></typeparam>
 /// <typeparam name="TResponse"></typeparam>
-public class ValidationBehavior<TRequest, TResponse>
+public class ValidationPipelineBehavior<TRequest, TResponse>
     : IPipelineBehavior<TRequest, TResponse>
         where TRequest : IBaseCommand
 {
     private readonly IEnumerable<IValidator<TRequest>> _validators;
 
     /// <summary>
-    /// <see cref="ValidationBehavior"/> public constructor
+    /// <see cref="ValidationPipelineBehavior"/> public constructor
     /// </summary>
     /// <param name="validators"></param>
-    public ValidationBehavior(IEnumerable<IValidator<TRequest>> validators)
+    public ValidationPipelineBehavior(IEnumerable<IValidator<TRequest>> validators)
     {
         _validators = validators;
     }
