@@ -1,8 +1,10 @@
 ﻿using MediatR;
 using FluentValidation;
 
-using CQRS.MediatR.Helper.Models;
+using CQRS.MediatR.Helper.ErrorHandler;
 using CQRS.MediatR.Helper.Abstractions.Messaging;
+
+using ValidationException = CQRS.MediatR.Helper.Exceptions.ValidationException;
 
 namespace CQRS.MediatR.Helper.Abstractions.Behaviors;
 
@@ -46,7 +48,7 @@ public class ValidationPipelineBehavior<TRequest, TResponse>
             .ToList();
 
         if (validationErrors.Any())
-            throw new Exceptions.ValidationException(validationErrors);
+            throw new ValidationException(validationErrors);
 
         return await next();
     }

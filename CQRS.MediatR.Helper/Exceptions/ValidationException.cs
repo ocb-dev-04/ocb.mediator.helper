@@ -1,4 +1,4 @@
-using CQRS.MediatR.Helper.Models;
+using CQRS.MediatR.Helper.ErrorHandler;
 
 namespace CQRS.MediatR.Helper.Exceptions;
 
