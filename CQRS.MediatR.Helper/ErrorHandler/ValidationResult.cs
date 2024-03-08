@@ -17,4 +17,7 @@ public class ValidationResult : Result, IValidationResult
         => Errors = errors;
 
     public ValidationError[] Errors {get;}
+
+    public static ValidationResult WithErrors(ValidationError[] errors)
+        => new(errors);
 }
