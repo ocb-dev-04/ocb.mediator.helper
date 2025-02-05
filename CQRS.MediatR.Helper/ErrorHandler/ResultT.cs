@@ -12,7 +12,7 @@ public class Result<TValue> : Result
     /// <param name="value"></param>
     /// <param name="isSuccess"></param>
     /// <param name="error"></param>
-    public Result(ValidationError error)
+    internal Result(ValidationError error)
         : base(error)
     {
     }

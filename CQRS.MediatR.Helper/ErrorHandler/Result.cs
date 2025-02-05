@@ -5,13 +5,13 @@
 /// </summary>
 public class Result
 {
-    public ValidationError Error { get; }
+    internal ValidationError Error { get; }
 
     /// <summary>
     /// Protected <see cref="Result"/> constructor
     /// </summary>
     /// <param name="error"></param>
-    protected Result(ValidationError error)
+    internal Result(ValidationError error)
         => Error = error;
 
     /// <summary>
@@ -20,7 +20,7 @@ public class Result
     /// <typeparam name="TValue"></typeparam>
     /// <param name="value"></param>
     /// <returns></returns>
-    public static Result<TValue> Success<TValue>(TValue value)
+    internal static Result<TValue> Success<TValue>(TValue value)
         => new(ValidationError.None);
 
     /// <summary>
@@ -29,7 +29,7 @@ public class Result
     /// <param name="error"></param>
     /// <typeparam name="TValue"></typeparam>
     /// <returns></returns>
-    public static Result<TValue> Failure<TValue>(ValidationError error)
+    internal static Result<TValue> Failure<TValue>(ValidationError error)
         => new(error);
 
     /// <summary>
@@ -37,7 +37,7 @@ public class Result
     /// </summary>
     /// <typeparam name="TValue"></typeparam>
     /// <returns></returns>
-    public static Result<TValue> Failure<TValue>()
+    internal static Result<TValue> Failure<TValue>()
         => new (ValidationError.None);
 
     /// <summary>
@@ -46,6 +46,6 @@ public class Result
     /// <param name="value"></param>
     /// <typeparam name="TValue"></typeparam>
     /// <returns></returns>
-    public static Result<TValue> Create<TValue>(TValue? value) =>
+    internal static Result<TValue> Create<TValue>(TValue? value) =>
         value is not null ? Success(value) : Failure<TValue>(ValidationError.NullValue);
 }
