@@ -3,12 +3,12 @@
 /// <summary>
 /// An <see cref="IdempotentCommand"/> to use when endpoint doesn't return value
 /// </summary>
-public interface IdempotentCommand 
+public abstract record IdempotentCommand(Guid RequestId)
     : ICommand;
 
 /// <summary>
 /// An <see cref="IdempotentCommand{TResponse}"/> to use when endpoint return value
 /// </summary>
 /// <typeparam name="TResponse"></typeparam>
-public interface IdempotentCommand<TResponse> 
+public abstract record IdempotentCommand<TResponse>(Guid RequestId)
     : ICommand<TResponse>;
