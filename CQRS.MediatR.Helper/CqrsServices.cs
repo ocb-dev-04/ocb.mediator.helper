@@ -2,6 +2,8 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using CQRS.MediatR.Helper.Abstractions.Messaging;
+using CQRS.MediatR.Helper.Implementations.Sender;
+using CQRS.MediatR.Helper.Abstractions.Sender;
 
 namespace CQRS.MediatR.Helper;
 
@@ -20,6 +22,8 @@ public static class CqrsServices
                 .AsImplementedInterfaces()
                 .WithScopedLifetime()
         );
+
+        services.AddScoped<ISender, Sender>();
 
         services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
     }

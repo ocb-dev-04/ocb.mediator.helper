@@ -15,7 +15,7 @@ public interface ICommandHandler<in TCommand>
     /// <param name="request"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    Task<Result> Handle(TCommand request, CancellationToken cancellationToken);
+    Task Handle(TCommand request, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -31,5 +31,5 @@ public interface ICommandHandler<in TCommand, TResponse>
     /// <param name="request"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    Task<Result<TResponse>> Handle(TCommand request, CancellationToken cancellationToken);
+    Task<TResponse> Handle(TCommand request, CancellationToken cancellationToken);
 }
