@@ -1,5 +1,4 @@
-﻿using MediatR;
-using Shared.Common.Helper.ErrorsHandler;
+﻿using Shared.Common.Helper.ErrorsHandler;
 
 namespace CQRS.MediatR.Helper.Abstractions.Messaging;
 
@@ -7,18 +6,30 @@ namespace CQRS.MediatR.Helper.Abstractions.Messaging;
 /// A <see cref="ICommandHandler{TCommand}"/> to use when endpoint doesn't return value
 /// </summary>
 /// <typeparam name="TCommand"></typeparam>
-public interface ICommandHandler<TCommand> 
-    : IRequestHandler<TCommand, Result>
+public interface ICommandHandler<in TCommand> 
         where TCommand : ICommand
 {
+    /// <summary>
+    /// Handle the <see cref="TCommand"/>
+    /// </summary>
+    /// <param name="request"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    Task<Result> Handle(TCommand request, CancellationToken cancellationToken);
 }
 
 /// <summary>
 /// A <see cref="ICommandHandler{TCommand, TResponse}"/> to use when endpoint return an object of type <typeparamref name="TResponse"/> 
 /// </summary>
 /// <typeparam name="TCommand"></typeparam>
-public interface ICommandHandler<TCommand, TResponse> 
-    : IRequestHandler<TCommand, Result<TResponse>>
+public interface ICommandHandler<in TCommand, TResponse> 
         where TCommand : ICommand<TResponse>
 {
+    /// <summary>
+    /// Handle the <see cref="TCommand"/> and returns an object of type <typeparamref name="TResponse"/>
+    /// </summary>
+    /// <param name="request"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    Task<Result<TResponse>> Handle(TCommand request, CancellationToken cancellationToken);
 }

@@ -1,4 +1,6 @@
-﻿namespace CQRS.MediatR.Helper.Abstractions.Messaging;
+﻿using CQRS.MediatR.Helper.Abstractions.Messaging;
+
+namespace CQRS.MediatR.Helper.Abstractions.Idempotency;
 
 /// <summary>
 /// An <see cref="IdempotentCommand"/> to use when endpoint doesn't return value

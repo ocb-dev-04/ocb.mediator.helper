@@ -1,5 +1,4 @@
-﻿using MediatR;
-using Shared.Common.Helper.ErrorsHandler;
+﻿using Shared.Common.Helper.ErrorsHandler;
 
 namespace CQRS.MediatR.Helper.Abstractions.Messaging;
 
@@ -8,8 +7,14 @@ namespace CQRS.MediatR.Helper.Abstractions.Messaging;
 /// </summary>
 /// <typeparam name="TQuery"></typeparam>
 /// <typeparam name="TResponse"></typeparam>
-public interface IQueryHandler<TQuery, TResponse> 
-    : IRequestHandler<TQuery, Result<TResponse>>
+public interface IQueryHandler<in TQuery, TResponse> 
         where TQuery : IQuery<TResponse>
 {
+    /// <summary>
+    /// Handle the <see cref="TQuery"/> and returns an object of type <typeparamref name="TResponse"/>
+    /// </summary>
+    /// <param name="request"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    Task<Result<TResponse>> Handle(TQuery request, CancellationToken cancellationToken);
 }
