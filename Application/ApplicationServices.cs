@@ -12,6 +12,7 @@ public static class ApplicationServices
     public static void AddApplicationServices(this IServiceCollection services)
     {
         services.AddCqrsServices(typeof(ApplicationServices).Assembly)
+            .AddPipelineBehavior(typeof(LoggerPipelineBehavior<,>))
             .AddPipelineBehavior(typeof(ValidationPipelineBehavior<,>))
             .AddValidators(typeof(ApplicationServices).Assembly, true);
     }

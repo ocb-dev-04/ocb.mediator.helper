@@ -7,7 +7,7 @@ internal sealed class DeleteCommandHandler : ICommandHandler<DeleteCommand>
 {
     public async Task<Result> Handle(DeleteCommand request, CancellationToken cancellationToken)
     {
-        await Task.Delay(1000);
-        return Result.Success();
+        Result result = Result.Success();
+        return await Task.FromResult(result);
     }
 }

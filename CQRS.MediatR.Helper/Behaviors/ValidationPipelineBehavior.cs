@@ -6,7 +6,7 @@ using CQRS.MediatR.Helper.Abstractions.Pipelines;
 namespace CQRS.MediatR.Helper.Behaviors;
 
 /// <summary>
-/// ValidationPipelineBehavior is a pipeline behavior that validates requests using FluentValidation.
+/// Pipeline behavior that validates requests using FluentValidation.
 /// </summary>
 /// <typeparam name="TRequest"></typeparam>
 /// <typeparam name="TResponse"></typeparam>
