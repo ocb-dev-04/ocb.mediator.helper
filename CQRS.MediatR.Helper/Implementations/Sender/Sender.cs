@@ -50,31 +50,18 @@ public class Sender : ISender
         where TRequest : notnull
     {
         Type requestType = request.GetType();
-        //Type handlerInterface = request switch
-        //{
-        //    TRequest r when typeof(IQuery<TResponse>).IsAssignableFrom(r.GetType()) =>
-        //        typeof(IQueryHandler<,>).MakeGenericType(r.GetType(), typeof(TResponse)),
-
-        //    TRequest r when typeof(ICommand<TResponse>).IsAssignableFrom(r.GetType()) =>
-        //        typeof(ICommandHandler<,>).MakeGenericType(r.GetType(), typeof(TResponse)),
-
-        //    TRequest r when typeof(ICommand).IsAssignableFrom(r.GetType()) =>
-        //        typeof(ICommandHandler<>).MakeGenericType(r.GetType()),
-
-        //    _ => throw new InvalidOperationException($"Unsupported request type: {requestType.Name}")
-        //};
         Type handlerInterface = request switch
         {
-            _ when TryGetGenericInterface(requestType, typeof(IQuery<>), out var queryTypeArg) =>
-                typeof(IQueryHandler<,>).MakeGenericType(requestType, queryTypeArg!),
+            TRequest r when typeof(IQuery<TResponse>).IsAssignableFrom(r.GetType()) =>
+                typeof(IQueryHandler<,>).MakeGenericType(r.GetType(), typeof(TResponse)),
 
-            _ when TryGetGenericInterface(requestType, typeof(ICommand<>), out var commandTypeArg) =>
-                typeof(ICommandHandler<,>).MakeGenericType(requestType, commandTypeArg!),
+            TRequest r when typeof(ICommand<TResponse>).IsAssignableFrom(r.GetType()) =>
+                typeof(ICommandHandler<,>).MakeGenericType(r.GetType(), typeof(TResponse)),
 
-            _ when typeof(ICommand).IsAssignableFrom(requestType) =>
-                typeof(ICommandHandler<>).MakeGenericType(requestType),
+            TRequest r when typeof(ICommand).IsAssignableFrom(r.GetType()) =>
+                typeof(ICommandHandler<>).MakeGenericType(r.GetType()),
 
-            _ => throw new InvalidOperationException($"Unsupported request type: {requestType.FullName}")
+            _ => throw new InvalidOperationException($"Unsupported request type: {requestType.Name}")
         };
 
         if (handlerInterface is null)
