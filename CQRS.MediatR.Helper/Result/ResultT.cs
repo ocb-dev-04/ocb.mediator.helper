@@ -1,4 +1,6 @@
-﻿namespace CQRS.MediatR.Helper.ErrorHandler;
+﻿using CQRS.MediatR.Helper.ErrorHandler;
+
+namespace CQRS.MediatR.Helper.Results;
 
 /// <summary>
 /// <see cref="Result"/> expansion

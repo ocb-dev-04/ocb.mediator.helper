@@ -53,7 +53,7 @@ app.MapPost("todos", async (
     [FromServices] ISender sender,
     CancellationToken cancellationToken) =>
 {
-    CreateCommand command = new(request.Name);
+    CreateCommand command = new(request.Name, request.Description);
     Result<Guid> result = await sender.Send(command, cancellationToken);
     
     return result.IsSuccess 

@@ -1,9 +1,15 @@
-﻿using MediatR;
-using FluentValidation;
+﻿using FluentValidation;
 using CQRS.MediatR.Helper.ErrorHandler;
+using Shared.Common.Helper.ErrorsHandler;
+using CQRS.MediatR.Helper.Abstractions.Pipelines;
 
 namespace CQRS.MediatR.Helper.Behaviors;
 
+/// <summary>
+/// ValidationPipelineBehavior is a pipeline behavior that validates requests using FluentValidation.
+/// </summary>
+/// <typeparam name="TRequest"></typeparam>
+/// <typeparam name="TResponse"></typeparam>
 public sealed class ValidationPipelineBehavior<TRequest, TResponse>
     : IPipelineBehavior<TRequest, TResponse>
         where TRequest : notnull
@@ -17,10 +23,7 @@ public sealed class ValidationPipelineBehavior<TRequest, TResponse>
         _validators = validators;
     }
 
-    public async Task<TResponse> Handle(
-        TRequest request,
-        RequestHandlerDelegate<TResponse> next,
-        CancellationToken cancellationToken = default)
+    public async Task<Result<TResponse>> Handle(TRequest request, CancellationToken cancellationToken, RequestHandlerDelegate<TResponse> next)
     {
         if (!_validators.Any())
             return await next();
@@ -41,21 +44,6 @@ public sealed class ValidationPipelineBehavior<TRequest, TResponse>
             throw new Exceptions.ValidationException(errors);
 
         return await next();
-    }
-
-    private static TResult CreateValidationResult<TResult>(ValidationError[] errors)
-        where TResult : Result
-    {
-        if (typeof(TResult) == typeof(Result))
-            return (ValidationResult.WithErrors(errors) as TResult)!;
-
-        object validationResult = typeof(ValidationResult<>)
-            .GetGenericTypeDefinition()
-            .MakeGenericType(typeof(TResult).GenericTypeArguments[0])
-            .GetMethod(nameof(ValidationResult.WithErrors))!
-            .Invoke(null, new object?[] { errors })!;
-
-        return (TResult)validationResult;
     }
 }
 

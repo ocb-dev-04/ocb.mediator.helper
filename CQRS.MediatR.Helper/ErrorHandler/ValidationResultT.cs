@@ -1,4 +1,5 @@
-﻿using CQRS.MediatR.Helper.Abstractions.Validations;
+﻿using CQRS.MediatR.Helper.Results;
+using CQRS.MediatR.Helper.Abstractions.Validations;
 
 namespace CQRS.MediatR.Helper.ErrorHandler;
 
