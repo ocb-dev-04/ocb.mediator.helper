@@ -25,7 +25,7 @@ public class Sender : ISender
 
     /// <inheritdoc/>
     public Task<Result<TResponse>> Send<TResponse>(IQuery<TResponse> query, CancellationToken cancellationToken = default)
-        => InvokeWithPipeline<IQuery<TResponse>, TResponse>(query, cancellationToken);
+        => InvokeWithPipeline<TResponse>(query.GetType(), query, cancellationToken);
 
     /// <inheritdoc/>
     public Task<Result> Send(ICommand command, CancellationToken cancellationToken = default)
@@ -33,39 +33,26 @@ public class Sender : ISender
 
     /// <inheritdoc/>
     public Task<Result<TResponse>> Send<TResponse>(ICommand<TResponse> command, CancellationToken cancellationToken = default)
-        => InvokeWithPipeline<ICommand<TResponse>, TResponse>(command, cancellationToken);
+        => InvokeWithPipeline<TResponse>(command.GetType(), command, cancellationToken);
 
-    #region Pipeline to command with returns
-
-    /// <summary>
-    /// Handle the pipelines and invoke the handler.
-    /// </summary>
-    /// <typeparam name="TRequest"></typeparam>
-    /// <typeparam name="TResponse"></typeparam>
-    /// <param name="request"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    /// <exception cref="InvalidOperationException"></exception>
-    private Task<Result<TResponse>> InvokeWithPipeline<TRequest, TResponse>(TRequest request, CancellationToken cancellationToken)
-        where TRequest : notnull
+    private Task<Result<TResponse>> InvokeWithPipeline<TResponse>(Type concreteType, object request, CancellationToken cancellationToken)
     {
-        Type requestType = request.GetType();
-        Type handlerInterface = request switch
+        Type handlerInterface;
+        if (typeof(IQuery<TResponse>).IsAssignableFrom(concreteType))
         {
-            TRequest r when typeof(IQuery<TResponse>).IsAssignableFrom(r.GetType()) =>
-                typeof(IQueryHandler<,>).MakeGenericType(r.GetType(), typeof(TResponse)),
-
-            TRequest r when typeof(ICommand<TResponse>).IsAssignableFrom(r.GetType()) =>
-                typeof(ICommandHandler<,>).MakeGenericType(r.GetType(), typeof(TResponse)),
-
-            TRequest r when typeof(ICommand).IsAssignableFrom(r.GetType()) =>
-                typeof(ICommandHandler<>).MakeGenericType(r.GetType()),
-
-            _ => throw new InvalidOperationException($"Unsupported request type: {requestType.Name}")
-        };
+            handlerInterface = typeof(IQueryHandler<,>).MakeGenericType(concreteType, typeof(TResponse));
+        }
+        else if (typeof(ICommand<TResponse>).IsAssignableFrom(concreteType))
+        {
+            handlerInterface = typeof(ICommandHandler<,>).MakeGenericType(concreteType, typeof(TResponse));
+        }
+        else
+        {
+            throw new InvalidOperationException($"Unsupported request type: {concreteType.Name}");
+        }
 
         if (handlerInterface is null)
-            throw new InvalidOperationException($"Handler interface not found for request type: {typeof(TRequest).FullName}");
+            throw new InvalidOperationException($"Handler interface not found for request type: {concreteType.FullName}");
 
         object handler = _serviceProvider.GetRequiredService(handlerInterface);
         MethodInfo? method = handlerInterface.GetMethod("Handle");
@@ -79,40 +66,40 @@ public class Sender : ISender
             return (Task<Result<TResponse>>)task;
         };
 
-        IEnumerable<dynamic>? behaviors = _serviceProvider
-            .GetServices(typeof(IPipelineBehavior<,>).MakeGenericType(typeof(TRequest), typeof(TResponse)))
-            .Cast<dynamic>()
+        // Get behaviors using the concrete type instead of the interface type
+        Type behaviorType = typeof(IPipelineBehavior<,>).MakeGenericType(concreteType, typeof(TResponse));
+        IEnumerable<object?> behaviors = _serviceProvider
+            .GetServices(behaviorType)
             .Reverse();
 
-        foreach (var behaviorObj in behaviors)
-            handlerDelegate = WrapWithBehavior<TRequest, TResponse>(behaviorObj, handlerDelegate, request, cancellationToken);
+        foreach (object? behavior in behaviors)
+        {
+            if (behavior is null) continue;
+
+            RequestHandlerDelegate<TResponse> currentDelegate = handlerDelegate;
+            handlerDelegate = () =>
+            {
+                object typedBehavior = behavior;
+                MethodInfo? handleMethod = behaviorType.GetMethod("Handle");
+                if (handleMethod == null)
+                    throw new InvalidOperationException($"Handle method not found on behavior type {behaviorType.FullName}");
+
+                return (Task<Result<TResponse>>)handleMethod.Invoke(
+                    typedBehavior,
+                    new object[] { request, cancellationToken, currentDelegate })!;
+            };
+        }
 
         return handlerDelegate();
     }
-
-    private static RequestHandlerDelegate<TResponse> WrapWithBehavior<TRequest, TResponse>(
-        object behaviorObj,
-        RequestHandlerDelegate<TResponse> next,
-        TRequest request,
-        CancellationToken cancellationToken)
-        where TRequest : notnull
-        where TResponse : notnull
-    {
-        IPipelineBehavior<TRequest, TResponse> behavior = (IPipelineBehavior<TRequest, TResponse>)behaviorObj;
-        return () => behavior.Handle(request, cancellationToken, next);
-    }
-
-    #endregion
-
-    #region Pipeline to Command with no returns
 
     /// <summary>
     /// Maneja comandos sin retorno con pipeline.
     /// </summary>
     private async Task<Result> InvokeWithPipeline(ICommand command, CancellationToken cancellationToken)
     {
-        Type requestType = command.GetType();
-        Type handlerInterface = typeof(ICommandHandler<>).MakeGenericType(requestType);
+        Type concreteType = command.GetType();
+        Type handlerInterface = typeof(ICommandHandler<>).MakeGenericType(concreteType);
         object handler = _serviceProvider.GetRequiredService(handlerInterface);
 
         MethodInfo? method = handlerInterface.GetMethod("Handle");
@@ -125,40 +112,28 @@ public class Sender : ISender
             return await (Task<Result>)task;
         };
 
-        Type behaviorInterfaceType = typeof(IPipelineBehavior<,>).MakeGenericType(requestType, typeof(Result));
-
-        IEnumerable<object> behaviors = _serviceProvider
-            .GetServices(behaviorInterfaceType)
-            .Cast<object>()
+        Type behaviorType = typeof(IPipelineBehavior<,>).MakeGenericType(concreteType, typeof(Result));
+        IEnumerable<object?> behaviors = _serviceProvider
+            .GetServices(behaviorType)
             .Reverse();
 
-        foreach (var behavior in behaviors)
-            handlerDelegate = CreateBehaviorWrapper(requestType, behavior, command, handlerDelegate, cancellationToken);
+        foreach (object? behavior in behaviors)
+        {
+            if(behavior is null) continue;
+
+            RequestHandlerDelegate<Result> currentDelegate = handlerDelegate;
+            handlerDelegate = async () =>
+            {
+                MethodInfo? handleMethod = behaviorType.GetMethod("Handle");
+                if (handleMethod is null)
+                    throw new InvalidOperationException($"Handle method not found on behavior type {behaviorType.FullName}");
+
+                return await (Task<Result>)handleMethod.Invoke(
+                    behavior,
+                    new object[] { command, cancellationToken, currentDelegate })!;
+            };
+        }
 
         return await handlerDelegate();
     }
-
-    private static RequestHandlerDelegate<Result> CreateBehaviorWrapper(
-        Type requestType,
-        object behavior,
-        ICommand request,
-        RequestHandlerDelegate<Result> next,
-        CancellationToken cancellationToken)
-    {
-        MethodInfo method = typeof(Sender)
-            .GetMethod(nameof(WrapWithBehaviorGeneric), BindingFlags.NonPublic | BindingFlags.Static)!
-            .MakeGenericMethod(requestType);
-
-        return (RequestHandlerDelegate<Result>)method.Invoke(null, new object[] { behavior, request, next, cancellationToken })!;
-    }
-
-    private static RequestHandlerDelegate<Result> WrapWithBehaviorGeneric<TRequest>(
-        IPipelineBehavior<TRequest, Result> behavior,
-        TRequest request,
-        RequestHandlerDelegate<Result> next,
-        CancellationToken cancellationToken)
-        where TRequest : notnull
-        => () => behavior.Handle(request, cancellationToken, next);
-
-    #endregion
 }
