@@ -50,18 +50,31 @@ public class Sender : ISender
         where TRequest : notnull
     {
         Type requestType = request.GetType();
+        //Type handlerInterface = request switch
+        //{
+        //    TRequest r when typeof(IQuery<TResponse>).IsAssignableFrom(r.GetType()) =>
+        //        typeof(IQueryHandler<,>).MakeGenericType(r.GetType(), typeof(TResponse)),
+
+        //    TRequest r when typeof(ICommand<TResponse>).IsAssignableFrom(r.GetType()) =>
+        //        typeof(ICommandHandler<,>).MakeGenericType(r.GetType(), typeof(TResponse)),
+
+        //    TRequest r when typeof(ICommand).IsAssignableFrom(r.GetType()) =>
+        //        typeof(ICommandHandler<>).MakeGenericType(r.GetType()),
+
+        //    _ => throw new InvalidOperationException($"Unsupported request type: {requestType.Name}")
+        //};
         Type handlerInterface = request switch
         {
-            TRequest r when typeof(IQuery<TResponse>).IsAssignableFrom(r.GetType()) =>
-                typeof(IQueryHandler<,>).MakeGenericType(r.GetType(), typeof(TResponse)),
+            _ when TryGetGenericInterface(requestType, typeof(IQuery<>), out var queryTypeArg) =>
+                typeof(IQueryHandler<,>).MakeGenericType(requestType, queryTypeArg!),
 
-            TRequest r when typeof(ICommand<TResponse>).IsAssignableFrom(r.GetType()) =>
-                typeof(ICommandHandler<,>).MakeGenericType(r.GetType(), typeof(TResponse)),
+            _ when TryGetGenericInterface(requestType, typeof(ICommand<>), out var commandTypeArg) =>
+                typeof(ICommandHandler<,>).MakeGenericType(requestType, commandTypeArg!),
 
-            TRequest r when typeof(ICommand).IsAssignableFrom(r.GetType()) =>
-                typeof(ICommandHandler<>).MakeGenericType(r.GetType()),
+            _ when typeof(ICommand).IsAssignableFrom(requestType) =>
+                typeof(ICommandHandler<>).MakeGenericType(requestType),
 
-            _ => throw new InvalidOperationException($"Unsupported request type: {requestType.Name}")
+            _ => throw new InvalidOperationException($"Unsupported request type: {requestType.FullName}")
         };
 
         if (handlerInterface is null)
@@ -100,6 +113,21 @@ public class Sender : ISender
     {
         IPipelineBehavior<TRequest, TResponse> behavior = (IPipelineBehavior<TRequest, TResponse>)behaviorObj;
         return () => behavior.Handle(request, cancellationToken, next);
+    }
+
+    private static bool TryGetGenericInterface(Type concreteType, Type genericInterfaceDefinition, out Type? genericTypeArgument)
+    {
+        Type? match = concreteType
+            .GetInterfaces()
+            .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == genericInterfaceDefinition);
+        if (match is not null)
+        {
+            genericTypeArgument = match.GenericTypeArguments[0];
+            return true;
+        }
+
+        genericTypeArgument = null;
+        return false;
     }
 
     #endregion
