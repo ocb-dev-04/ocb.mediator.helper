@@ -1,4 +1,4 @@
-﻿using CQRS.MediatR.Helper.Abstractions.Messaging;
+﻿using OCB.Mediator.Helper.Abstractions.Messaging;
 
 namespace Application.UsesCases.Create;
 

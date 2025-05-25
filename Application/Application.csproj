@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CQRS.MediatR.Helper\CQRS.MediatR.Helper.csproj" />
+    <ProjectReference Include="..\OCB.Mediator.Helper\OCB.Mediator.Helper.csproj" />
   </ItemGroup>
 
 </Project>

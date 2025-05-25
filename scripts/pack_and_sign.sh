@@ -6,7 +6,7 @@ set -o pipefail  # Catch errors with pipes
 PACKAGE_VERSION="${GITHUB_REF_NAME}"
 
 SCRIPTS_PATH="./scripts"
-PACKAGE_PATH="./CQRS.MediatR.Helper"
+PACKAGE_PATH="./OCB.Mediator.Helper"
 
 CERT_DIR="$SCRIPTS_PATH/certificates"
 CERT_KEY="$CERT_DIR/private_key.pem"
@@ -14,7 +14,7 @@ CERT_PEM="$CERT_DIR/certificate.pem"
 CERT_PFX="$CERT_DIR/certificate.pfx"
 SIGNING_KEY_PASSWORD="QWERTYuiop1234@"
 
-NUGET_PACKAGE_PATH="$SCRIPTS_PATH/CQRS.MediatR.Helper.${PACKAGE_VERSION}.nupkg"
+NUGET_PACKAGE_PATH="$SCRIPTS_PATH/OCB.Mediator.Helper.${PACKAGE_VERSION}.nupkg"
 
 # ************************************************************************************************************
 # Build and pack NuGet
