@@ -2,9 +2,9 @@ using Application;
 using Scalar.AspNetCore;
 using Microsoft.AspNetCore.Mvc;
 using Application.UsesCases.Create;
+using Application.UsesCases.Delete;
 using Application.UsesCases.GetById;
 using Shared.Common.Helper.ErrorsHandler;
-using CQRS.MediatR.Helper.Abstractions.Messaging;
 using CQRS.MediatR.Helper.Abstractions.Sender;
 
 WebApplicationBuilder? builder = WebApplication.CreateBuilder(args);
@@ -35,19 +35,6 @@ app.MapGet("todos", async (
         : Results.NotFound();
 });
 
-//app.MapPost("todos", async (
-//    CreateRequest request,
-//    [FromServices] ICommandHandler<CreateCommand, Guid> commandHandler,
-//    CancellationToken cancellationToken) =>
-//{
-//    CreateCommand command = new(request.Name);
-//    Result<Guid> result = await commandHandler.Handle(command, cancellationToken);
-    
-//    return result.IsSuccess 
-//        ? Results.Created($"/todos/{result.Value}", result.Value) 
-//        : Results.BadRequest(result.Error.Description);
-//});
-
 app.MapPost("todos", async (
     CreateRequest request,
     [FromServices] ISender sender,
@@ -58,6 +45,19 @@ app.MapPost("todos", async (
     
     return result.IsSuccess 
         ? Results.Created($"/todos/{result.Value}", result.Value) 
+        : Results.BadRequest(result.Error.Description);
+});
+
+app.MapDelete("todos", async (
+    Guid id,
+    [FromServices] ISender sender,
+    CancellationToken cancellationToken) =>
+{
+    DeleteCommand command = new(id);
+    Result result = await sender.Send(command, cancellationToken);
+    
+    return result.IsSuccess 
+        ? Results.Ok()
         : Results.BadRequest(result.Error.Description);
 });
 

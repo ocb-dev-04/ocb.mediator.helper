@@ -49,14 +49,23 @@ public class Sender : ISender
     private Task<Result<TResponse>> InvokeWithPipeline<TRequest, TResponse>(TRequest request, CancellationToken cancellationToken)
         where TRequest : notnull
     {
-        Type handlerInterface = typeof(ICommandHandler<,>).MakeGenericType(request.GetType(), typeof(TResponse));
-        if (!typeof(TRequest).Name.StartsWith("ICommand"))
+        Type requestType = request.GetType();
+        Type handlerInterface = request switch
         {
-            if (typeof(TRequest).Name.StartsWith("IQuery"))
-                handlerInterface = typeof(IQueryHandler<,>).MakeGenericType(request.GetType(), typeof(TResponse));
-            else
-                handlerInterface = typeof(ICommandHandler<>).MakeGenericType(request.GetType());
-        }
+            TRequest r when typeof(IQuery<TResponse>).IsAssignableFrom(r.GetType()) =>
+                typeof(IQueryHandler<,>).MakeGenericType(r.GetType(), typeof(TResponse)),
+
+            TRequest r when typeof(ICommand<TResponse>).IsAssignableFrom(r.GetType()) =>
+                typeof(ICommandHandler<,>).MakeGenericType(r.GetType(), typeof(TResponse)),
+
+            TRequest r when typeof(ICommand).IsAssignableFrom(r.GetType()) =>
+                typeof(ICommandHandler<>).MakeGenericType(r.GetType()),
+
+            _ => throw new InvalidOperationException($"Unsupported request type: {requestType.Name}")
+        };
+
+        if (handlerInterface is null)
+            throw new InvalidOperationException($"Handler interface not found for request type: {typeof(TRequest).FullName}");
 
         object handler = _serviceProvider.GetRequiredService(handlerInterface);
         MethodInfo? method = handlerInterface.GetMethod("Handle");
@@ -66,7 +75,7 @@ public class Sender : ISender
 
         RequestHandlerDelegate<TResponse> handlerDelegate = () =>
         {
-            var task = method.Invoke(handler, new object[] { request, cancellationToken })!;
+            object task = method.Invoke(handler, new object[] { request, cancellationToken })!;
             return (Task<Result<TResponse>>)task;
         };
 
@@ -112,11 +121,11 @@ public class Sender : ISender
 
         RequestHandlerDelegate handlerDelegate = () =>
         {
-            var task = method.Invoke(handler, new object[] { command, cancellationToken })!;
+            object task = method.Invoke(handler, new object[] { command, cancellationToken })!;
             return (Task<Result>)task;
         };
 
-        Type behaviorType = typeof(IPipelineBehavior<>).MakeGenericType(requestType);
+        Type behaviorType = typeof(IPipelineBehavior<,>).MakeGenericType(requestType, typeof(Result));
         IEnumerable<object> behaviors = _serviceProvider
             .GetServices(behaviorType)
             .Cast<object>()
