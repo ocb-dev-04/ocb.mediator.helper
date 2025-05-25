@@ -35,9 +35,6 @@ public static class CqrsServices
             .AddClasses(clases => clases.AssignableTo(typeof(ICommandHandler<,>)), publicOnly: false)
                 .AsImplementedInterfaces()
                 .WithScopedLifetime()
-            //.AddClasses(classes => classes.AssignableTo(typeof(IPipelineBehavior<,>)), publicOnly: false)
-            //    .AsImplementedInterfaces()
-            //    .WithScopedLifetime()
         );
 
         return services;
