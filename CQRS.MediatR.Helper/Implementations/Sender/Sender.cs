@@ -4,6 +4,7 @@ using CQRS.MediatR.Helper.Abstractions.Sender;
 using Microsoft.Extensions.DependencyInjection;
 using CQRS.MediatR.Helper.Abstractions.Messaging;
 using CQRS.MediatR.Helper.Abstractions.Pipelines;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace CQRS.MediatR.Helper.Implementations.Sender;
 
@@ -112,25 +113,22 @@ public class Sender : ISender
             return await (Task<Result>)task;
         };
 
-        Type behaviorType = typeof(IPipelineBehavior<,>).MakeGenericType(concreteType, typeof(Result));
-        IEnumerable<object?> behaviors = _serviceProvider
-            .GetServices(behaviorType)
-            .Reverse();
-
+        Type pipelineInterfaceType = typeof(IPipelineBehavior<,>).MakeGenericType(concreteType, typeof(Result));
+        IEnumerable<object?> behaviors = _serviceProvider.GetServices(pipelineInterfaceType).Reverse();
         foreach (object? behavior in behaviors)
         {
-            if(behavior is null) continue;
+            if (behavior is null) continue;
 
-            RequestHandlerDelegate<Result> currentDelegate = handlerDelegate;
+            RequestHandlerDelegate<Result> next = handlerDelegate;
             handlerDelegate = async () =>
             {
-                MethodInfo? handleMethod = behaviorType.GetMethod("Handle");
-                if (handleMethod is null)
-                    throw new InvalidOperationException($"Handle method not found on behavior type {behaviorType.FullName}");
+                MethodInfo? behaviorHandle = pipelineInterfaceType.GetMethod("Handle");
+                if (behaviorHandle is null)
+                    throw new InvalidOperationException($"Handle method not found in behavior {pipelineInterfaceType.FullName}");
 
-                return await (Task<Result>)handleMethod.Invoke(
-                    behavior,
-                    new object[] { command, cancellationToken, currentDelegate })!;
+                object pipelineTask = behaviorHandle.Invoke(behavior, new object[] { command, cancellationToken, next })!;
+                dynamic awaited = await (dynamic)pipelineTask;
+                return (Result)awaited;
             };
         }
 
