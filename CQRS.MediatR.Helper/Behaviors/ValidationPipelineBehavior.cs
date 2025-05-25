@@ -46,4 +46,3 @@ public sealed class ValidationPipelineBehavior<TRequest, TResponse>
         return await next();
     }
 }
-

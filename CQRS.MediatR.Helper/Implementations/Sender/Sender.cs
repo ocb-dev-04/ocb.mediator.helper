@@ -109,7 +109,7 @@ public class Sender : ISender
     /// <summary>
     /// Maneja comandos sin retorno con pipeline.
     /// </summary>
-    private Task<Result> InvokeWithPipeline(ICommand command, CancellationToken cancellationToken)
+    private async Task<Result> InvokeWithPipeline(ICommand command, CancellationToken cancellationToken)
     {
         Type requestType = command.GetType();
         Type handlerInterface = typeof(ICommandHandler<>).MakeGenericType(requestType);
@@ -119,36 +119,46 @@ public class Sender : ISender
         if (method is null)
             throw new InvalidOperationException($"Handle method not found in handler: {handlerInterface.FullName}");
 
-        RequestHandlerDelegate handlerDelegate = () =>
+        RequestHandlerDelegate<Result> handlerDelegate = async () =>
         {
             object task = method.Invoke(handler, new object[] { command, cancellationToken })!;
-            return (Task<Result>)task;
+            return await (Task<Result>)task;
         };
 
-        Type behaviorType = typeof(IPipelineBehavior<,>).MakeGenericType(requestType, typeof(Result));
+        Type behaviorInterfaceType = typeof(IPipelineBehavior<,>).MakeGenericType(requestType, typeof(Result));
+
         IEnumerable<object> behaviors = _serviceProvider
-            .GetServices(behaviorType)
+            .GetServices(behaviorInterfaceType)
             .Cast<object>()
             .Reverse();
 
-        foreach (var behaviorObj in behaviors)
-            handlerDelegate = WrapWithBehavior(command, handlerDelegate, behaviorObj, cancellationToken);
+        foreach (var behavior in behaviors)
+            handlerDelegate = CreateBehaviorWrapper(requestType, behavior, command, handlerDelegate, cancellationToken);
 
-        return handlerDelegate();
+        return await handlerDelegate();
     }
 
-    private static RequestHandlerDelegate WrapWithBehavior(
+    private static RequestHandlerDelegate<Result> CreateBehaviorWrapper(
+        Type requestType,
+        object behavior,
         ICommand request,
-        RequestHandlerDelegate next,
-        object behaviorObj,
+        RequestHandlerDelegate<Result> next,
         CancellationToken cancellationToken)
     {
-        Type behaviorType = typeof(IPipelineBehavior<>).MakeGenericType(request.GetType());
-        MethodInfo? handleMethod = behaviorType.GetMethod("Handle");
+        MethodInfo method = typeof(Sender)
+            .GetMethod(nameof(WrapWithBehaviorGeneric), BindingFlags.NonPublic | BindingFlags.Static)!
+            .MakeGenericMethod(requestType);
 
-        return () => (Task<Result>)handleMethod!.Invoke(behaviorObj, new object[] { request, cancellationToken, next })!;
+        return (RequestHandlerDelegate<Result>)method.Invoke(null, new object[] { behavior, request, next, cancellationToken })!;
     }
 
+    private static RequestHandlerDelegate<Result> WrapWithBehaviorGeneric<TRequest>(
+        IPipelineBehavior<TRequest, Result> behavior,
+        TRequest request,
+        RequestHandlerDelegate<Result> next,
+        CancellationToken cancellationToken)
+        where TRequest : notnull
+        => () => behavior.Handle(request, cancellationToken, next);
 
     #endregion
 }
