@@ -1,5 +1,6 @@
 ﻿using CQRS.MediatR.Helper;
 using CQRS.MediatR.Helper.Behaviors;
+using CQRS.MediatR.Helper.Behaviors.Pipelines;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Application;
