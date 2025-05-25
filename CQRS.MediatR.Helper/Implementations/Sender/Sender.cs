@@ -102,21 +102,6 @@ public class Sender : ISender
         return () => behavior.Handle(request, cancellationToken, next);
     }
 
-    private static bool TryGetGenericInterface(Type concreteType, Type genericInterfaceDefinition, out Type? genericTypeArgument)
-    {
-        Type? match = concreteType
-            .GetInterfaces()
-            .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == genericInterfaceDefinition);
-        if (match is not null)
-        {
-            genericTypeArgument = match.GenericTypeArguments[0];
-            return true;
-        }
-
-        genericTypeArgument = null;
-        return false;
-    }
-
     #endregion
 
     #region Pipeline to Command with no returns

@@ -13,6 +13,7 @@ namespace CQRS.MediatR.Helper.Behaviors;
 public sealed class ValidationPipelineBehavior<TRequest, TResponse>
     : IPipelineBehavior<TRequest, TResponse>
         where TRequest : notnull
+        where TResponse : notnull
 {
     private readonly IEnumerable<IValidator<TRequest>> _validators;
 
