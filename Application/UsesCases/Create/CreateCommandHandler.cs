@@ -3,7 +3,7 @@ using CQRS.MediatR.Helper.Abstractions.Messaging;
 
 namespace Application.UsesCases.Create;
 
-internal sealed class CreateCommandHandler : ICommandHandler<CreateCommand, Result<Guid>>
+internal sealed class CreateCommandHandler : ICommandHandler<CreateCommand, Guid>
 {
     public async Task<Result<Guid>> Handle(CreateCommand request, CancellationToken cancellationToken)
     {

@@ -3,7 +3,7 @@ using CQRS.MediatR.Helper.Abstractions.Messaging;
 
 namespace Application.UsesCases.GetById;
 
-internal sealed class GetByIdQueryHandler : IQueryHandler<GetByIdQuery, Result<GetByIdResponse>>
+internal sealed class GetByIdQueryHandler : IQueryHandler<GetByIdQuery, GetByIdResponse>
 {
     public async Task<Result<GetByIdResponse>> Handle(GetByIdQuery request, CancellationToken cancellationToken)
     {

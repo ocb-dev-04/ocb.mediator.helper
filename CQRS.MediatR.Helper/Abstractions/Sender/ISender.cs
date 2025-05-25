@@ -1,4 +1,5 @@
-﻿using CQRS.MediatR.Helper.Abstractions.Messaging;
+﻿using Shared.Common.Helper.ErrorsHandler;
+using CQRS.MediatR.Helper.Abstractions.Messaging;
 
 namespace CQRS.MediatR.Helper.Abstractions.Sender;
 
@@ -14,7 +15,7 @@ public interface ISender
     /// <param name="query"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    Task<TResponse> Send<TResponse>(IQuery<TResponse> query, CancellationToken cancellationToken = default);
+    Task<Result<TResponse>> Send<TResponse>(IQuery<TResponse> query, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sends a command.
@@ -22,7 +23,7 @@ public interface ISender
     /// <param name="command"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    Task Send(ICommand command, CancellationToken cancellationToken = default);
+    Task<Result> Send(ICommand command, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sends a command and returns a response.
@@ -31,5 +32,5 @@ public interface ISender
     /// <param name="command"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    Task<TResponse> Send<TResponse>(ICommand<TResponse> command, CancellationToken cancellationToken = default);
+    Task<Result<TResponse>> Send<TResponse>(ICommand<TResponse> command, CancellationToken cancellationToken = default);
 }

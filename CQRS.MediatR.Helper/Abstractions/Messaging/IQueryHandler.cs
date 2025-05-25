@@ -16,5 +16,5 @@ public interface IQueryHandler<in TQuery, TResponse>
     /// <param name="request"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    Task<TResponse> Handle(TQuery request, CancellationToken cancellationToken);
+    Task<Result<TResponse>> Handle(TQuery request, CancellationToken cancellationToken);
 }

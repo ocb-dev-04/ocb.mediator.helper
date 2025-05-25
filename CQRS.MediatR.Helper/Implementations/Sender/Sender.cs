@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using Shared.Common.Helper.ErrorsHandler;
 using CQRS.MediatR.Helper.Abstractions.Sender;
 using Microsoft.Extensions.DependencyInjection;
 using CQRS.MediatR.Helper.Abstractions.Messaging;
@@ -22,7 +23,7 @@ public class Sender : ISender
     }
 
     /// <inheritdoc/>
-    public Task<TResponse> Send<TResponse>(IQuery<TResponse> query, CancellationToken cancellationToken = default)
+    public Task<Result<TResponse>> Send<TResponse>(IQuery<TResponse> query, CancellationToken cancellationToken = default)
     {
         Type handlerInterface = typeof(IQueryHandler<,>).MakeGenericType(query.GetType(), typeof(TResponse));
         object handler = _serviceProvider.GetRequiredService(handlerInterface);
@@ -31,11 +32,11 @@ public class Sender : ISender
         if (method is null)
             throw new InvalidOperationException($"Handle method not found in handler: {handlerInterface.FullName}");
 
-        return (Task<TResponse>)method.Invoke(handler, new object[] { query, cancellationToken })!;
+        return (Task<Result<TResponse>>)method.Invoke(handler, new object[] { query, cancellationToken })!;
     }
 
     /// <inheritdoc/>
-    public Task Send(ICommand command, CancellationToken cancellationToken = default)
+    public Task<Result> Send(ICommand command, CancellationToken cancellationToken = default)
     {
         Type handlerInterface = typeof(ICommandHandler<>).MakeGenericType(command.GetType());
         object handler = _serviceProvider.GetRequiredService(handlerInterface);
@@ -44,11 +45,11 @@ public class Sender : ISender
         if (method is null)
             throw new InvalidOperationException($"Handle method not found in handler: {handlerInterface.FullName}");
 
-        return (Task)method.Invoke(handler, new object[] { command, cancellationToken })!;
+        return (Task<Result>)method.Invoke(handler, new object[] { command, cancellationToken })!;
     }
 
     /// <inheritdoc/>
-    public Task<TResponse> Send<TResponse>(ICommand<TResponse> command, CancellationToken cancellationToken = default)
+    public Task<Result<TResponse>> Send<TResponse>(ICommand<TResponse> command, CancellationToken cancellationToken = default)
     {
         Type handlerInterface = typeof(ICommandHandler<,>).MakeGenericType(command.GetType(), typeof(TResponse));
         object handler = _serviceProvider.GetRequiredService(handlerInterface);
@@ -57,6 +58,6 @@ public class Sender : ISender
         if (method is null)
             throw new InvalidOperationException($"Handle method not found in handler: {handlerInterface.FullName}");
 
-        return (Task<TResponse>)method.Invoke(handler, new object[] { command, cancellationToken })!;
+        return (Task<Result<TResponse>>)method.Invoke(handler, new object[] { command, cancellationToken })!;
     }
 }
