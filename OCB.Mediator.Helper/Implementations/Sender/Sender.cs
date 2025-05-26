@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using System.Collections.Concurrent;
 using Shared.Common.Helper.ErrorsHandler;
 using OCB.Mediator.Helper.Abstractions.Sender;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +14,8 @@ namespace OCB.Mediator.Helper.Implementations.Sender;
 public class Sender : ISender
 {
     private readonly IServiceProvider _serviceProvider;
+
+    private static readonly ConcurrentDictionary<Type, Delegate> _compiledHandlers = new();
 
     /// <summary>
     /// <see cref="Sender"/> public constructor.
@@ -34,6 +37,42 @@ public class Sender : ISender
     /// <inheritdoc/>
     public Task<Result<TResponse>> Send<TResponse>(ICommand<TResponse> command, CancellationToken cancellationToken = default)
         => InvokeWithPipeline<TResponse>(command.GetType(), command, cancellationToken);
+
+    #region Dispatch for caching
+
+    private Task<Result<TResponse>> Dispatch<TResponse>(Type requestType, object request, CancellationToken cancellationToken)
+    {
+        Func<IServiceProvider, object, CancellationToken, Task<Result<TResponse>>>? func = (Func<IServiceProvider, object, CancellationToken, Task<Result<TResponse>>>)
+            _compiledHandlers.GetOrAdd(requestType, static type =>
+            {
+                return (sp, req, ct) =>
+                {
+                    Sender sender = (Sender)sp.GetRequiredService(typeof(Sender));
+                    return sender.InvokeWithPipeline<TResponse>(type, req, ct);
+                };
+            });
+
+        return func(_serviceProvider, request, cancellationToken);
+    }
+
+    private Task<Result> Dispatch(Type requestType, object request, CancellationToken cancellationToken)
+    {
+        Func<IServiceProvider, object, CancellationToken, Task<Result>>? func = (Func<IServiceProvider, object, CancellationToken, Task<Result>>)
+            _compiledHandlers.GetOrAdd(requestType, static type =>
+            {
+                return (sp, req, ct) =>
+                {
+                    var sender = (Sender)sp.GetRequiredService(typeof(Sender));
+                    return sender.InvokeWithPipeline(type, req, ct);
+                };
+            });
+
+        return func(_serviceProvider, request, cancellationToken);
+    }
+
+    #endregion
+
+    #region Invoke methods
 
     private Task<Result<TResponse>> InvokeWithPipeline<TResponse>(Type concreteType, object request, CancellationToken cancellationToken)
     {
@@ -130,4 +169,6 @@ public class Sender : ISender
 
         return await handlerDelegate();
     }
+
+    #endregion
 }
