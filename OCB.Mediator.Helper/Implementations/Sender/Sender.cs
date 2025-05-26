@@ -93,9 +93,6 @@ public class Sender : ISender
         return handlerDelegate();
     }
 
-    /// <summary>
-    /// Maneja comandos sin retorno con pipeline.
-    /// </summary>
     private async Task<Result> InvokeWithPipeline(ICommand command, CancellationToken cancellationToken)
     {
         Type concreteType = command.GetType();
