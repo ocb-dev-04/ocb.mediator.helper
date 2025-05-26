@@ -40,7 +40,7 @@ public static class MediatorServices
                 .WithScopedLifetime()
         );
 
-        services.Scan(scan => scan.FromAssemblies(assembly)
+        services.Scan(scan => scan.FromApplicationDependencies()
             .AddClasses(c => c.AssignableTo(typeof(INotificationHandler<>)), publicOnly: false)
             .AsImplementedInterfaces()
             .WithScopedLifetime());

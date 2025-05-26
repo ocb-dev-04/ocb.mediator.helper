@@ -15,7 +15,7 @@ dotnet add package OCB.Mediator.Helper
 In your `Program.cs`, register the mediator services: [1](#1-0) 
 
 ```csharp
-builder.Services.AddApplicationServices();
+builder.Services.AddMediatorHelperServices({AssemblyWithHandlers});
 ```
 
 This extension method automatically registers:
