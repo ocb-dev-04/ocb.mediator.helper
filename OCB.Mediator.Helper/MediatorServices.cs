@@ -25,7 +25,9 @@ public static class MediatorServices
         this IServiceCollection services, 
         Assembly assembly)
     {
-        services.AddScoped<ISender, Sender>();
+        services.AddScoped<Sender>();
+        services.AddScoped<ISender>(sp => sp.GetRequiredService<Sender>());
+
         services.AddScoped<INotificationDispatcher, NotificationDispatcher>();
 
         services.Scan(scan => scan.FromAssemblies(assembly)

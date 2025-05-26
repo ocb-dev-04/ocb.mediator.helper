@@ -28,14 +28,14 @@ public sealed class LoggerPipelineBehavior<TRequest, TResponse>
         DateTime startTime = DateTime.UtcNow;
         Stopwatch stopwatch = Stopwatch.StartNew();
 
-        _logger.LogWarning("--> Handling {RequestName} at {TimestampUtc}", requestName, startTime);
+        _logger.LogInformation("--> Handling {RequestName} at {TimestampUtc}", requestName, startTime);
 
         try
         {
             Result<TResponse> response = await next();
 
             stopwatch.Stop();
-            _logger.LogWarning("--> Handled {RequestName} in {ElapsedMs}ms", requestName, stopwatch.ElapsedMilliseconds);
+            _logger.LogInformation("--> Handled {RequestName} in {ElapsedMs}ms", requestName, stopwatch.ElapsedMilliseconds);
 
             return response;
         }
