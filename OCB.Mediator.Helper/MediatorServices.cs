@@ -5,6 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using OCB.Mediator.Helper.Abstractions.Messaging;
 using OCB.Mediator.Helper.Implementations.Sender;
 using OCB.Mediator.Helper.Abstractions.Pipelines;
+using OCB.Mediator.Helper.Abstractions.Notification;
+using OCB.Mediator.Helper.Implementations.Notification;
 
 namespace OCB.Mediator.Helper;
 
@@ -24,6 +26,7 @@ public static class MediatorServices
         Assembly assembly)
     {
         services.AddScoped<ISender, Sender>();
+        services.AddScoped<INotificationDispatcher, NotificationDispatcher>();
 
         services.Scan(scan => scan.FromAssemblies(assembly)
             .AddClasses(clases => clases.AssignableTo(typeof(IQueryHandler<,>)), publicOnly: false)
@@ -36,6 +39,11 @@ public static class MediatorServices
                 .AsImplementedInterfaces()
                 .WithScopedLifetime()
         );
+
+        services.Scan(scan => scan.FromApplicationDependencies()
+            .AddClasses(c => c.AssignableTo(typeof(INotificationHandler<>)), publicOnly: false)
+            .AsImplementedInterfaces()
+            .WithScopedLifetime());
 
         return services;
     }
