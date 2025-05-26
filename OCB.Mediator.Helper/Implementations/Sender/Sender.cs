@@ -28,15 +28,15 @@ public class Sender : ISender
 
     /// <inheritdoc/>
     public Task<Result<TResponse>> Send<TResponse>(IQuery<TResponse> query, CancellationToken cancellationToken = default)
-        => InvokeWithPipeline<TResponse>(query.GetType(), query, cancellationToken);
+        => Dispatch<TResponse>(query.GetType(), query, cancellationToken);
 
     /// <inheritdoc/>
     public Task<Result> Send(ICommand command, CancellationToken cancellationToken = default)
-        => InvokeWithPipeline(command, cancellationToken);
+        => Dispatch(command.GetType(), command, cancellationToken);
 
     /// <inheritdoc/>
     public Task<Result<TResponse>> Send<TResponse>(ICommand<TResponse> command, CancellationToken cancellationToken = default)
-        => InvokeWithPipeline<TResponse>(command.GetType(), command, cancellationToken);
+        => Dispatch<TResponse>(command.GetType(), command, cancellationToken);
 
     #region Dispatch for caching
 
@@ -45,11 +45,12 @@ public class Sender : ISender
         Func<IServiceProvider, object, CancellationToken, Task<Result<TResponse>>>? func = (Func<IServiceProvider, object, CancellationToken, Task<Result<TResponse>>>)
             _compiledHandlers.GetOrAdd(requestType, static type =>
             {
-                return (sp, req, ct) =>
-                {
-                    Sender sender = (Sender)sp.GetRequiredService(typeof(Sender));
-                    return sender.InvokeWithPipeline<TResponse>(type, req, ct);
-                };
+                return new Func<IServiceProvider, object, CancellationToken, Task<Result<TResponse>>>(
+                    (sp, req, ct) =>
+                    {
+                        Sender sender = (Sender)sp.GetRequiredService(typeof(Sender));
+                        return sender.InvokeWithPipeline<TResponse>(type, req, ct);
+                    });
             });
 
         return func(_serviceProvider, request, cancellationToken);
@@ -60,11 +61,12 @@ public class Sender : ISender
         Func<IServiceProvider, object, CancellationToken, Task<Result>>? func = (Func<IServiceProvider, object, CancellationToken, Task<Result>>)
             _compiledHandlers.GetOrAdd(requestType, static type =>
             {
-                return (sp, req, ct) =>
-                {
-                    var sender = (Sender)sp.GetRequiredService(typeof(Sender));
-                    return sender.InvokeWithPipeline(type, req, ct);
-                };
+                return new Func<IServiceProvider, object, CancellationToken, Task<Result>>(
+                    (sp, req, ct) =>
+                    {
+                        var sender = (Sender)sp.GetRequiredService(typeof(Sender));
+                        return sender.InvokeWithPipeline((ICommand)req, ct);
+                    });
             });
 
         return func(_serviceProvider, request, cancellationToken);
