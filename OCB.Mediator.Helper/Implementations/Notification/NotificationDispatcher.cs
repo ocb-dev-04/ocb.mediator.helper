@@ -1,9 +1,9 @@
 ﻿using System.Reflection;
+using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using OCB.Mediator.Helper.Abstractions.Notification;
-using Microsoft.Extensions.Logging;
-using System.Diagnostics;
 
 namespace OCB.Mediator.Helper.Implementations.Notification;
 
