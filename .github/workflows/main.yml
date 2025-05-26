@@ -33,5 +33,8 @@ jobs:
           ./scripts/pack_and_sign.sh
 
       - name: Publish
-        run: >
+        run:  |
+          echo "--> Files in ./scripts/"
+          ls -lh ./scripts/
+
           dotnet nuget push ./scripts/OCB.Mediator.Helper.${{ github.ref_name}}.nupkg -s https://nuget.pkg.github.com/ocb-dev-04/index.json -k ${{ secrets.NUGET_AUTH_TOKEN }}
