@@ -1,20 +1,20 @@
 ﻿using OCB.Mediator.Helper.ErrorHandler;
 
-namespace OCB.Mediator.Helper.Results;
+namespace OCB.Mediator.Helper.ValidationResults;
 
 /// <summary>
-/// <see cref="Result"/> expansion
+/// <see cref="ValidationResult"/> expansion
 /// </summary>
 /// <typeparam name="TValue"></typeparam>
-public class Result<TValue> : Result
+public class ValidationResult<TValue> : ValidationResult
 {
     /// <summary>
-    /// Protected <see cref="Result{TValue}"/> constructor
+    /// Protected <see cref="ValidationResult{TValue}"/> constructor
     /// </summary>
     /// <param name="value"></param>
     /// <param name="isSuccess"></param>
     /// <param name="error"></param>
-    internal Result(ValidationError error)
+    internal ValidationResult(ValidationError error)
         : base(error)
     {
     }

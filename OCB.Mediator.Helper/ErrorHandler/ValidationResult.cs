@@ -1,15 +1,14 @@
 ﻿using OCB.Mediator.Helper.Abstractions.Validations;
-using OCB.Mediator.Helper.Results;
 
 namespace OCB.Mediator.Helper.ErrorHandler;
 
 /// <summary>
-/// Base class to use Result design pattern
+/// Base class to use ValidationResult design pattern
 /// </summary>
-public class ValidationResult : Result, IValidationResult
+public class ValidationResult : ValidationResults.ValidationResult, IValidationResult
 {
     /// <summary>
-    /// Protected <see cref="Result"/> constructor
+    /// Protected <see cref="Results.ValidationResult"/> constructor
     /// </summary>
     /// <param name="isSuccess"></param>
     /// <param name="error"></param>

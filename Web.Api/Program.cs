@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Application.UsesCases.Create;
 using Application.UsesCases.Delete;
 using Application.UsesCases.GetById;
-using Shared.Common.Helper.ErrorsHandler;
+using OCB.Mediator.Helper.ResultPattern;
 using OCB.Mediator.Helper.Abstractions.Sender;
 
 WebApplicationBuilder? builder = WebApplication.CreateBuilder(args);

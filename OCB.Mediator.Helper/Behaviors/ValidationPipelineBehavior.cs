@@ -1,6 +1,6 @@
 ﻿using FluentValidation;
 using OCB.Mediator.Helper.ErrorHandler;
-using Shared.Common.Helper.ErrorsHandler;
+using OCB.Mediator.Helper.ResultPattern;
 using OCB.Mediator.Helper.Abstractions.Pipelines;
 
 namespace OCB.Mediator.Helper.Behaviors;

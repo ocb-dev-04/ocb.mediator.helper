@@ -1,7 +1,7 @@
-﻿using Shared.Common.Helper.ErrorsHandler;
+﻿using Application.Events;
+using OCB.Mediator.Helper.ResultPattern;
 using OCB.Mediator.Helper.Abstractions.Messaging;
 using OCB.Mediator.Helper.Abstractions.Notification;
-using Application.Events;
 
 namespace Application.UsesCases.Create;
 

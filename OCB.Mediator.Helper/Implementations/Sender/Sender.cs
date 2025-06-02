@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 using System.Collections.Concurrent;
-using Shared.Common.Helper.ErrorsHandler;
+using OCB.Mediator.Helper.ResultPattern;
 using OCB.Mediator.Helper.Abstractions.Sender;
 using Microsoft.Extensions.DependencyInjection;
 using OCB.Mediator.Helper.Abstractions.Messaging;

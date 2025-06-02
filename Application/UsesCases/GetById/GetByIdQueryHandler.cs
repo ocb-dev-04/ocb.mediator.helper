@@ -1,4 +1,4 @@
-﻿using Shared.Common.Helper.ErrorsHandler;
+﻿using OCB.Mediator.Helper.ResultPattern;
 using OCB.Mediator.Helper.Abstractions.Messaging;
 
 namespace Application.UsesCases.GetById;

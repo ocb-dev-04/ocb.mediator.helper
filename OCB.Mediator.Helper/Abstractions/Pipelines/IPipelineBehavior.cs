@@ -1,4 +1,4 @@
-﻿using Shared.Common.Helper.ErrorsHandler;
+﻿using OCB.Mediator.Helper.ResultPattern;
 
 namespace OCB.Mediator.Helper.Abstractions.Pipelines;
 

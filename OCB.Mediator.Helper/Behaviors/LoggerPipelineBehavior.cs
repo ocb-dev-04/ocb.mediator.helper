@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 using Microsoft.Extensions.Logging;
-using Shared.Common.Helper.ErrorsHandler;
+using OCB.Mediator.Helper.ResultPattern;
 using OCB.Mediator.Helper.Abstractions.Pipelines;
 
 namespace OCB.Mediator.Helper.Behaviors.Pipelines;

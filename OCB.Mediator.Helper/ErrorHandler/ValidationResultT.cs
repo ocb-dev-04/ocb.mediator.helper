@@ -1,5 +1,4 @@
-﻿using OCB.Mediator.Helper.Results;
-using OCB.Mediator.Helper.Abstractions.Validations;
+﻿using OCB.Mediator.Helper.Abstractions.Validations;
 
 namespace OCB.Mediator.Helper.ErrorHandler;
 
@@ -7,7 +6,7 @@ namespace OCB.Mediator.Helper.ErrorHandler;
 /// <see cref="ValidationResult"/> expansion
 /// </summary>
 /// <typeparam name="TValue"></typeparam>
-public sealed class ValidationResult<TValue> : Result<TValue>, IValidationResult
+public sealed class ValidationResult<TValue> : ValidationResults.ValidationResult<TValue>, IValidationResult
 {
     /// <summary>
     /// Protected <see cref="ValidationResult{TValue}"/> constructor
