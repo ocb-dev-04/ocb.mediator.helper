@@ -30,7 +30,7 @@ public static class MediatorServices
 
         services.AddScoped<INotificationDispatcher, NotificationDispatcher>();
 
-        services.Scan(scan => scan.FromAssemblies(assembly)
+        services.Scan(scan => scan.FromAssemblies(new[] { assembly })
             .AddClasses(clases => clases.AssignableTo(typeof(IQueryHandler<,>)), publicOnly: false)
                 .AsImplementedInterfaces()
                 .WithScopedLifetime()
@@ -42,7 +42,42 @@ public static class MediatorServices
                 .WithScopedLifetime()
         );
 
-        services.Scan(scan => scan.FromApplicationDependencies()
+        services.Scan(scan => scan.FromAssemblies(new[] { assembly })
+            .AddClasses(c => c.AssignableTo(typeof(INotificationHandler<>)), publicOnly: false)
+            .AsImplementedInterfaces()
+            .WithScopedLifetime());
+
+        return services;
+    }
+
+    /// <summary>
+    /// Add all query/handlers using scruptor
+    /// </summary>
+    /// <param name="services"></param>
+    /// <param name="assembly"></param>
+    /// <returns></returns>
+    public static IServiceCollection AddMediatorHelperServices(
+        this IServiceCollection services,
+        Assembly[] assemblies)
+    {
+        services.AddScoped<Sender>();
+        services.AddScoped<ISender>(sp => sp.GetRequiredService<Sender>());
+
+        services.AddScoped<INotificationDispatcher, NotificationDispatcher>();
+
+        services.Scan(scan => scan.FromAssemblies(assemblies)
+            .AddClasses(clases => clases.AssignableTo(typeof(IQueryHandler<,>)), publicOnly: false)
+                .AsImplementedInterfaces()
+                .WithScopedLifetime()
+            .AddClasses(clases => clases.AssignableTo(typeof(ICommandHandler<>)), publicOnly: false)
+                .AsImplementedInterfaces()
+                .WithScopedLifetime()
+            .AddClasses(clases => clases.AssignableTo(typeof(ICommandHandler<,>)), publicOnly: false)
+                .AsImplementedInterfaces()
+                .WithScopedLifetime()
+        );
+
+        services.Scan(scan => scan.FromAssemblies(assemblies)
             .AddClasses(c => c.AssignableTo(typeof(INotificationHandler<>)), publicOnly: false)
             .AsImplementedInterfaces()
             .WithScopedLifetime());
@@ -83,6 +118,23 @@ public static class MediatorServices
         bool includeInternalTypes = false)
     {
         services.AddValidatorsFromAssembly(assembly, includeInternalTypes: includeInternalTypes);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Add fluent validators
+    /// </summary>
+    /// <param name="services"></param>
+    /// <param name="assembly"></param>
+    /// <param name="includeInternalTypes"></param>
+    /// <returns></returns>
+    public static IServiceCollection AddValidators(
+        this IServiceCollection services,
+        Assembly[] assemblies,
+        bool includeInternalTypes = false)
+    {
+        services.AddValidatorsFromAssemblies(assemblies, includeInternalTypes: includeInternalTypes);
 
         return services;
     }
