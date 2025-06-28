@@ -18,7 +18,12 @@ internal sealed class CreateCommandHandler : ICommandHandler<CreateCommand, Guid
         Guid id = Guid.NewGuid();
 
         TestEvent testEvent = new (request.Name, request.Description);
-        await _notificationDispacher.DispatchAsync(testEvent, cancellationToken);
+        
+        // all Notification Pipeline will be executed
+        await _notificationDispacher.DispatchAsync(testEvent, true, cancellationToken);
+        
+        // ignore all Notification Pipelines
+        //await _notificationDispacher.UnhandledDispatchAsync(testEvent, true, cancellationToken);
 
         return await Task.FromResult(id);
     }
