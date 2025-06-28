@@ -1,8 +1,10 @@
-﻿using System.Reflection;
+﻿using Polly;
+using System.Reflection;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
+using OCB.Mediator.Helper.Abstractions.Pipelines;
 using OCB.Mediator.Helper.Abstractions.Notification;
 
 namespace OCB.Mediator.Helper.Implementations.Notification;
@@ -14,8 +16,9 @@ internal sealed class NotificationDispatcher
     : INotificationDispatcher
 {
     private readonly IServiceProvider _serviceProvider; 
-    private readonly ILogger<NotificationDispatcher> _logger;
-    
+    private readonly ILogger<NotificationDispatcher> _logger; 
+    private readonly AsyncPolicy _retryPolicy;
+
     private static readonly ConcurrentDictionary<Type, Func<IServiceProvider, INotification, CancellationToken, Task[]>> _cachedDispatchers = new();
 
     /// <summary>
@@ -23,23 +26,53 @@ internal sealed class NotificationDispatcher
     /// </summary>
     /// <param name="serviceProvider"></param>
     /// <param name="logger"></param>
+    /// <exception cref="ArgumentNullException"></exception>
     public NotificationDispatcher(
         IServiceProvider serviceProvider, 
         ILogger<NotificationDispatcher> logger)
     {
-        _serviceProvider = serviceProvider;
-        _logger = logger;
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _retryPolicy = Policy
+            .Handle<Exception>() // Maneja cualquier excepción
+            .WaitAndRetryAsync(
+                retryCount: 3,
+                sleepDurationProvider: attempt => TimeSpan.FromMilliseconds(250 * attempt),
+                onRetry: (exception, delay, retryCount, _) 
+                    => logger.LogWarning(exception, "--> [Polly Retry] next in {Delay}ms", delay.TotalMilliseconds));
     }
 
     /// <inheritdoc/>
-    public async Task DispatchAsync<TNotification>(TNotification notification, CancellationToken cancellationToken = default)
+    public async Task DispatchAsync<TNotification>(
+        TNotification notification,
+        CancellationToken cancellationToken = default)
         where TNotification : INotification
     {
         Stopwatch stopwatch = Stopwatch.StartNew();
-        
-        Func<IServiceProvider, INotification, CancellationToken, Task[]> dispatcher = _cachedDispatchers.GetOrAdd(notification.GetType(), CreateDispatcher);
-        Task[] tasks = dispatcher(_serviceProvider, notification, cancellationToken);
-        await Task.WhenAll(tasks);
+
+        using IServiceScope scope = _serviceProvider.CreateScope();
+        INotificationPipelineBehavior<TNotification>[] behaviors = scope.ServiceProvider
+            .GetServices<INotificationPipelineBehavior<TNotification>>()
+            .Reverse()
+            .ToArray();
+
+        Func<Task> handlerInvocation = async () =>
+        {
+            Func<IServiceProvider, INotification, CancellationToken, Task[]> dispatcher = _cachedDispatchers.GetOrAdd(
+                typeof(TNotification),
+                CreateDispatcher);
+
+            Task[] tasks = dispatcher(scope.ServiceProvider, notification, cancellationToken);
+            await Task.WhenAll(tasks);
+        };
+
+        foreach (INotificationPipelineBehavior<TNotification> behavior in behaviors)
+        {
+            Func<Task> next = handlerInvocation;
+            handlerInvocation = () => behavior.HandleAsync(notification, cancellationToken, next);
+        }
+
+        await _retryPolicy.ExecuteAsync(handlerInvocation);
 
         stopwatch.Stop();
         _logger.LogInformation("--> DispatchAsync<{NotificationType}> took {ElapsedMilliseconds} ms",

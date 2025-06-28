@@ -1,7 +1,7 @@
 ﻿using OCB.Mediator.Helper;
-using OCB.Mediator.Helper.Behaviors;
 using OCB.Mediator.Helper.Behaviors.Pipelines;
 using Microsoft.Extensions.DependencyInjection;
+using OCB.Mediator.Helper.Behaviors.Notifications;
 
 namespace Application;
 
@@ -15,6 +15,7 @@ public static class ApplicationServices
         services.AddMediatorHelperServices(typeof(ApplicationServices).Assembly)
             .AddPipelineBehavior(typeof(LoggerPipelineBehavior<,>))
             .AddPipelineBehavior(typeof(ValidationPipelineBehavior<,>))
+            .AddNotificationPipelineBehavior(typeof(ExceptionHandlingNotificationPipelineBehavior<>))
             .AddValidators(typeof(ApplicationServices).Assembly, true);
     }
 }

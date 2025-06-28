@@ -3,7 +3,7 @@ using OCB.Mediator.Helper.ErrorHandler;
 using OCB.Mediator.Helper.ResultPattern;
 using OCB.Mediator.Helper.Abstractions.Pipelines;
 
-namespace OCB.Mediator.Helper.Behaviors;
+namespace OCB.Mediator.Helper.Behaviors.Pipelines;
 
 /// <summary>
 /// Pipeline behavior that validates requests using FluentValidation.

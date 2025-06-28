@@ -18,6 +18,9 @@ internal sealed class TestEventHandler
     public Task HandleAsync(TestEvent notification, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("TestEventHandler: {Message}", JsonConvert.SerializeObject(notification));
+        if(notification.Name.Length > 1)
+            throw new Exception("Test exception in TestEventHandler");
+
         return Task.CompletedTask;
     }
 }

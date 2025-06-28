@@ -8,6 +8,9 @@ namespace OCB.Mediator.Helper.Abstractions.Pipelines;
 /// <typeparam name="TRequest"></typeparam>
 public interface IPipelineBehavior<TRequest>
 {
+    /// <summary>
+    /// Processes the specified request and invokes the next handler in the pipeline.
+    /// </summary>
     Task<Result> Handle(TRequest request, CancellationToken cancellationToken, RequestHandlerDelegate next);
 }
 

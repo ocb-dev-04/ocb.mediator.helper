@@ -99,7 +99,35 @@ public static class MediatorServices
         if (!behaviorType.IsGenericTypeDefinition)
             throw new ArgumentException("Only open generic types are allowed", nameof(behaviorType));
 
+        if (!behaviorType.GetInterfaces()
+            .Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IPipelineBehavior<,>)))
+            throw new ArgumentException($"{behaviorType.Name} must implement IPipelineBehavior<,>", nameof(behaviorType));
+
         Type interfaceType = typeof(IPipelineBehavior<,>);
+        services.AddScoped(interfaceType, behaviorType);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Add custom notification pipeline behavior
+    /// </summary>
+    /// <param name="services"></param>
+    /// <param name="behaviorType"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException"></exception>
+    public static IServiceCollection AddNotificationPipelineBehavior(
+        this IServiceCollection services,
+        Type behaviorType)
+    {
+        if (!behaviorType.IsGenericTypeDefinition)
+            throw new ArgumentException("Only open generic types are allowed", nameof(behaviorType));
+
+        if (!behaviorType.GetInterfaces()
+            .Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(INotificationPipelineBehavior<>)))
+            throw new ArgumentException($"{behaviorType.Name} must implement INotificationPipelineBehavior<>", nameof(behaviorType));
+
+        Type interfaceType = typeof(INotificationPipelineBehavior<>);
         services.AddScoped(interfaceType, behaviorType);
 
         return services;
