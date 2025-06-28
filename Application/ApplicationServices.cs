@@ -1,7 +1,8 @@
 ﻿using OCB.Mediator.Helper;
+using Application.Behaviors.EventPipelines;
+using Application.Behaviors.HandlerPipelines;
 using OCB.Mediator.Helper.Behaviors.Pipelines;
 using Microsoft.Extensions.DependencyInjection;
-using OCB.Mediator.Helper.Behaviors.Notifications;
 
 namespace Application;
 

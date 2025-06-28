@@ -14,11 +14,11 @@ public interface INotificationPipelineBehavior<TNotification>
     /// Handles the notification in the pipeline.
     /// </summary>
     /// <param name="notification"></param>
-    /// <param name="cancellationToken"></param>
     /// <param name="next"></param>
+    /// <param name="cancellationToken"></param>
     /// <returns></returns>
     Task HandleAsync(
         TNotification notification,
-        CancellationToken cancellationToken,
-        Func<Task> next);
+        Func<Task> next,
+        CancellationToken cancellationToken);
 }

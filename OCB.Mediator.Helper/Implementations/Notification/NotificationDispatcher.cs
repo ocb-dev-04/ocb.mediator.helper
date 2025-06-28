@@ -34,7 +34,7 @@ internal sealed class NotificationDispatcher
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _retryPolicy = Policy
-            .Handle<Exception>() // Maneja cualquier excepción
+            .Handle<Exception>()
             .WaitAndRetryAsync(
                 retryCount: 3,
                 sleepDurationProvider: attempt => TimeSpan.FromMilliseconds(250 * attempt),
@@ -69,7 +69,7 @@ internal sealed class NotificationDispatcher
         foreach (INotificationPipelineBehavior<TNotification> behavior in behaviors)
         {
             Func<Task> next = handlerInvocation;
-            handlerInvocation = () => behavior.HandleAsync(notification, cancellationToken, next);
+            handlerInvocation = () => behavior.HandleAsync(notification, next, cancellationToken);
         }
 
         await _retryPolicy.ExecuteAsync(handlerInvocation);

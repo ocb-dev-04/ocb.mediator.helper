@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using OCB.Mediator.Helper.ResultPattern;
 using OCB.Mediator.Helper.Abstractions.Pipelines;
 
-namespace OCB.Mediator.Helper.Behaviors.Pipelines;
+namespace Application.Behaviors.HandlerPipelines;
 
 /// <summary>
 /// Pipeline behavior that logs the handling of requests.

@@ -2,7 +2,7 @@
 using OCB.Mediator.Helper.Abstractions.Notification;
 using OCB.Mediator.Helper.Abstractions.Pipelines;
 
-namespace OCB.Mediator.Helper.Behaviors.Notifications;
+namespace Application.Behaviors.EventPipelines;
 
 /// <summary>
 /// Defines a pipeline behavior for handling exceptions during the processing of notifications.
@@ -27,7 +27,7 @@ public sealed class ExceptionHandlingNotificationPipelineBehavior<TNotification>
         _onException = onException;
     }
 
-    public async Task HandleAsync(TNotification notification, CancellationToken cancellationToken, Func<Task> next)
+    public async Task HandleAsync(TNotification notification, Func<Task> next, CancellationToken cancellationToken)
     {
         try
         {
