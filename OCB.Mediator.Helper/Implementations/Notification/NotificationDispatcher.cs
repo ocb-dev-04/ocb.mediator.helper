@@ -2,6 +2,7 @@
 using System.Reflection;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using OCB.Mediator.Helper.Abstractions.Pipelines;
 using OCB.Mediator.Helper.Abstractions.Notification;
@@ -18,7 +19,7 @@ internal sealed class NotificationDispatcher
     private readonly ILogger<NotificationDispatcher> _logger; 
     private readonly AsyncPolicy _retryPolicy;
 
-    //private static readonly ConcurrentDictionary<Type, Func<IServiceProvider, INotification, CancellationToken, Task[]>> _cachedDispatchers = new();
+    private static readonly ConcurrentDictionary<Type, Func<IServiceProvider, INotification, CancellationToken, Task[]>> _cachedDispatchers = new();
 
     /// <summary>
     /// <see cref="NotificationDispatcher"/> public constructor that accepts an <see cref="IServiceProvider"/> to resolve dependencies.
@@ -70,7 +71,9 @@ internal sealed class NotificationDispatcher
 
         Func<Task> handlerInvocation = async () =>
         {
-            Func<IServiceProvider, INotification, CancellationToken, Task[]> dispatcher = CreateDispatcher(typeof(TNotification));
+            Func<IServiceProvider, INotification, CancellationToken, Task[]> dispatcher = _cachedDispatchers.GetOrAdd(
+                typeof(TNotification),
+                CreateDispatcher(typeof(TNotification)));
 
             Task[] tasks = dispatcher(scope.ServiceProvider, notification, cancellationToken);
             await Task.WhenAll(tasks);
@@ -105,12 +108,11 @@ internal sealed class NotificationDispatcher
         Type handlerType = typeof(INotificationHandler<>).MakeGenericType(notificationType);
         return (serviceProvider, notification, cancellationToken) =>
         {
-            using IServiceScope scope = serviceProvider.CreateScope();
             Type notificationType = notification.GetType();
             Type handlerInterface = typeof(INotificationHandler<>).MakeGenericType(notificationType);
             Task[] tasks = Enumerable.Empty<Task>().ToArray();
 
-            object?[] handlers = scope.ServiceProvider.GetServices(handlerInterface).Reverse().ToArray();
+            object?[] handlers = serviceProvider.GetServices(handlerInterface).Reverse().ToArray();
             if (!handlers.Any()) return tasks;
 
             tasks = handlers
