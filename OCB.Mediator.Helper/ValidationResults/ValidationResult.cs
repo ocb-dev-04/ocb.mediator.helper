@@ -3,51 +3,59 @@
 namespace OCB.Mediator.Helper.ValidationResults;
 
 /// <summary>
-/// Base class to use ValidationResult design pattern
+/// Represents the result of a validation operation, indicating success or failure.
 /// </summary>
+/// <remarks>A <see cref="ValidationResult"/> encapsulates the outcome of a validation process, including any
+/// associated error information. Use this class to represent validation results in scenarios where success or failure
+/// needs to be communicated.</remarks>
 public class ValidationResult
 {
+    /// <summary>
+    /// Gets the validation error associated with the current operation.
+    /// </summary>
     internal ValidationError Error { get; }
 
     /// <summary>
-    /// Protected <see cref="ValidationResult"/> constructor
+    /// <see cref="ValidationResult"/> internal constructor
     /// </summary>
-    /// <param name="error"></param>
+    /// <param name="error">The validation error associated with the result. Cannot be <see langword="null"/>.</param>
     internal ValidationResult(ValidationError error)
         => Error = error;
 
     /// <summary>
-    /// Return a <see cref="ValidationResult"/> as success with response <see cref="{TValue}"/> value 
+    /// Creates a successful validation result containing the specified value.
     /// </summary>
-    /// <typeparam name="TValue"></typeparam>
-    /// <param name="value"></param>
-    /// <returns></returns>
+    /// <typeparam name="TValue">The type of the value being validated.</typeparam>
+    /// <param name="value">The value associated with the successful validation result.</param>
+    /// <returns>A <see cref="ValidationResult{TValue}"/> representing a successful validation, with no errors.</returns>
     internal static ValidationResult<TValue> Success<TValue>(TValue value)
         => new(ValidationError.None);
 
     /// <summary>
-    /// Return a <see cref="ValidationResult"/> as failure with <see cref="{Error}"/> value
+    /// Creates a failed validation result with the specified error.
     /// </summary>
-    /// <param name="error"></param>
-    /// <typeparam name="TValue"></typeparam>
-    /// <returns></returns>
+    /// <typeparam name="TValue">The type of the value associated with the validation result.</typeparam>
+    /// <param name="error">The validation error that describes the failure. Cannot be null.</param>
+    /// <returns>A <see cref="ValidationResult{TValue}"/> representing a failed validation result.</returns>
     internal static ValidationResult<TValue> Failure<TValue>(ValidationError error)
         => new(error);
 
     /// <summary>
-    /// Return a <see cref="ValidationResult"/> as failure with none error
+    /// Creates a validation result that represents a failure with no associated validation error.
     /// </summary>
-    /// <typeparam name="TValue"></typeparam>
-    /// <returns></returns>
+    /// <typeparam name="TValue">The type of the value being validated.</typeparam>
+    /// <returns>A <see cref="ValidationResult{TValue}"/> instance indicating a failure with no validation error.</returns>
     internal static ValidationResult<TValue> Failure<TValue>()
         => new (ValidationError.None);
 
     /// <summary>
-    /// Create a <see cref="ValidationResult{TValue}"/>, uf <typeparamref name="TValue"/> is not null then return <see cref="{TValue}"/> if it's null otherwise return <see cref="Error.NullValue"/>
+    /// Creates a <see cref="ValidationResult{TValue}"/> instance based on the specified value.
     /// </summary>
-    /// <param name="value"></param>
-    /// <typeparam name="TValue"></typeparam>
-    /// <returns></returns>
+    /// <typeparam name="TValue">The type of the value to validate.</typeparam>
+    /// <param name="value">The value to validate. Can be null.</param>
+    /// <returns>A <see cref="ValidationResult{TValue}"/> representing the validation outcome.  Returns a successful result if
+    /// <paramref name="value"/> is not null; otherwise,  returns a failure result with a <see
+    /// cref="ValidationError.NullValue"/> error.</returns>
     internal static ValidationResult<TValue> Create<TValue>(TValue? value) =>
         value is not null ? Success(value) : Failure<TValue>(ValidationError.NullValue);
 }

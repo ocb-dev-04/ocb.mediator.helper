@@ -3,14 +3,23 @@
 namespace OCB.Mediator.Helper.Abstractions.Idempotency;
 
 /// <summary>
-/// An <see cref="IdempotentCommand"/> to use when endpoint doesn't return value
+/// Represents a command that ensures idempotent behavior by associating a unique request identifier.
 /// </summary>
+/// <remarks>Idempotent commands are designed to prevent unintended side effects when executed multiple times. The
+/// <see cref="RequestId"/> property uniquely identifies the request, allowing the system to track and ensure that the
+/// command is processed only once.</remarks>
+/// <param name="RequestId"></param>
 public abstract record IdempotentCommand(Guid RequestId)
     : ICommand;
 
 /// <summary>
-/// An <see cref="IdempotentCommand{TResponse}"/> to use when endpoint return value
+/// Represents a command that ensures idempotent behavior, guaranteeing that repeated executions with the same <see
+/// cref="RequestId"/> produce the same result.
 /// </summary>
-/// <typeparam name="TResponse"></typeparam>
+/// <remarks>Idempotent commands are useful in scenarios where duplicate requests may occur, such as distributed
+/// systems or retry mechanisms. The <see cref="RequestId"/> uniquely identifies the command instance, allowing the
+/// system to recognize and handle duplicate requests appropriately.</remarks>
+/// <typeparam name="TResponse">The type of the response returned by the command.</typeparam>
+/// <param name="RequestId"></param>
 public abstract record IdempotentCommand<TResponse>(Guid RequestId)
     : ICommand<TResponse>;

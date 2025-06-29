@@ -10,8 +10,12 @@ using OCB.Mediator.Helper.Abstractions.Notification;
 namespace OCB.Mediator.Helper.Implementations.Notification;
 
 /// <summary>
-/// <see cref="INotificationDispatcher"/> implementation that dispatches notifications to all registered handlers.
+/// Provides functionality to dispatch notifications to their respective handlers,  with optional retry and pipeline
+/// behaviors.
 /// </summary>
+/// <remarks>The <see cref="NotificationDispatcher"/> is responsible for resolving notification handlers  and
+/// invoking them asynchronously. It supports retry policies for transient failures and  allows the use of pipeline
+/// behaviors to modify or extend the dispatch process.</remarks>
 internal sealed class NotificationDispatcher
     : INotificationDispatcher
 {
@@ -22,11 +26,13 @@ internal sealed class NotificationDispatcher
     private static readonly ConcurrentDictionary<Type, Func<IServiceProvider, INotification, CancellationToken, Task[]>> _cachedDispatchers = new();
 
     /// <summary>
-    /// <see cref="NotificationDispatcher"/> public constructor that accepts an <see cref="IServiceProvider"/> to resolve dependencies.
+    /// <see cref="NotificationDispatcher"/> public constructor 
     /// </summary>
-    /// <param name="serviceProvider"></param>
-    /// <param name="logger"></param>
-    /// <exception cref="ArgumentNullException"></exception>
+    /// <param name="serviceProvider">The service provider used to resolve dependencies required for notification dispatching. Cannot be <see
+    /// langword="null"/>.</param>
+    /// <param name="logger">The logger used to log diagnostic and retry information during notification dispatching. Cannot be <see
+    /// langword="null"/>.</param>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="serviceProvider"/> or <paramref name="logger"/> is <see langword="null"/>.</exception>
     public NotificationDispatcher(
         IServiceProvider serviceProvider, 
         ILogger<NotificationDispatcher> logger)
@@ -58,6 +64,22 @@ internal sealed class NotificationDispatcher
             where TNotification : INotification
         => HandleDispatchAsync(notification, useRetry, usePipeline: false, cancellationToken);
 
+    /// <summary>
+    /// Handles the dispatch of a notification to its registered handlers, optionally applying retry policies and
+    /// pipeline behaviors.
+    /// </summary>
+    /// <remarks>This method creates a new service scope for resolving dependencies and dispatching the
+    /// notification.  If <paramref name="usePipeline"/> is <see langword="true"/>, the notification will be processed
+    /// through  all registered pipeline behaviors in reverse order. If <paramref name="useRetry"/> is <see
+    /// langword="true"/>,  retry policies will be applied to the dispatch operation.</remarks>
+    /// <typeparam name="TNotification">The type of the notification being dispatched. Must implement <see cref="INotification"/>.</typeparam>
+    /// <param name="notification">The notification instance to be dispatched to handlers.</param>
+    /// <param name="useRetry">A value indicating whether retry policies should be applied during the dispatch process.  <see langword="true"/>
+    /// to apply retry policies; otherwise, <see langword="false"/>.</param>
+    /// <param name="usePipeline">A value indicating whether pipeline behaviors should be applied during the dispatch process.  <see
+    /// langword="true"/> to apply pipeline behaviors; otherwise, <see langword="false"/>.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests. The operation will be canceled if the token is triggered.</param>
+    /// <returns></returns>
     private async Task HandleDispatchAsync<TNotification>(
         TNotification notification,
         bool useRetry = true,
@@ -103,6 +125,17 @@ internal sealed class NotificationDispatcher
             typeof(TNotification).Name, stopwatch.ElapsedMilliseconds);
     }
 
+    /// <summary>
+    /// Creates a dispatcher function that resolves and invokes notification handlers for a given notification type.
+    /// </summary>
+    /// <remarks>The returned dispatcher function resolves all registered handlers for the specified
+    /// notification type from the  <see cref="IServiceProvider"/> and invokes their <c>HandleAsync</c> method. If no
+    /// handlers are registered, the function  returns an empty array of tasks.  Handlers are invoked in reverse order
+    /// of their registration in the service provider.</remarks>
+    /// <param name="notificationType">The type of the notification for which handlers will be resolved and invoked.</param>
+    /// <returns>A function that takes an <see cref="IServiceProvider"/>, a notification instance, and a <see
+    /// cref="CancellationToken"/>,  and returns an array of <see cref="Task"/> objects representing the asynchronous
+    /// operations performed by the handlers.</returns>
     private static Func<IServiceProvider, INotification, CancellationToken, Task[]> CreateDispatcher(Type notificationType)
     {
         Type handlerType = typeof(INotificationHandler<>).MakeGenericType(notificationType);

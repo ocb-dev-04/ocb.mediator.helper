@@ -3,57 +3,72 @@
 namespace OCB.Mediator.Helper.ResultPattern;
 
 /// <summary>
-/// Error model
+/// Represents an error with an associated HTTP status code, translation key, and description.
 /// </summary>
+/// <remarks>The <see cref="Error"/> record is used to encapsulate error information in a structured format. It
+/// includes a status code, a translation key for localization purposes, and a description of the error. Common
+/// predefined errors are available as static instances, such as <see cref="None"/> and <see cref="NullValue"/>.
+/// Additionally, factory methods are provided to create specific error instances for common HTTP status
+/// codes.</remarks>
 /// <param name="StatusCode"></param>
 /// <param name="Translation"></param>
 /// <param name="Description"></param>
-/// <returns></returns>
 public record Error(int StatusCode, string Translation, string Description)
 {
     public static Error None = new(0, string.Empty, string.Empty);
     public static Error NullValue = new(500, "nullValue", "Null value was provided");
 
     /// <summary>
-    /// Method to create a <see cref="Error"/> instance as not modified
+    /// Creates an <see cref="Error"/> instance representing a "Not Modified" (HTTP 304) status.
     /// </summary>
-    /// <param name="translation"></param>
-    /// <param name="message"></param>
-    /// <returns></returns>
+    /// <param name="translation">An optional string providing a localized or alternative representation of the error. If <paramref
+    /// name="translation"/> is <see langword="null"/>, an empty string is used.</param>
+    /// <param name="message">An optional string containing additional details about the error. If <paramref name="message"/> is <see
+    /// langword="null"/>, an empty string is used.</param>
+    /// <returns>An <see cref="Error"/> object with a status code of 304 (Not Modified), and the specified translation and
+    /// message values.</returns>
     public static Error NotModified(string? translation = default, string? message = default)
         => new(StatusCodes.Status304NotModified, translation ?? string.Empty, message ?? string.Empty);
 
     /// <summary>
-    /// Method to create a <see cref="Error"/> instance as bad request
+    /// Creates an <see cref="Error"/> instance representing a 400 Bad Request HTTP status code.
     /// </summary>
-    /// <param name="translation"></param>
-    /// <param name="message"></param>
-    /// <returns></returns>
+    /// <param name="translation">An optional string representing a translation key or identifier for the error message. If not provided, defaults
+    /// to an empty string.</param>
+    /// <param name="message">An optional string containing the error message to be associated with the response. If not provided, defaults to
+    /// an empty string.</param>
+    /// <returns>An <see cref="Error"/> object initialized with a 400 Bad Request status code, the specified translation key, and
+    /// the specified error message.</returns>
     public static Error BadRequest(string? translation = default, string? message = default)
         => new(StatusCodes.Status400BadRequest, translation ?? string.Empty, message ?? string.Empty);
 
     /// <summary>
-    /// Method to create a <see cref="Error"/> instance as not found
+    /// Creates an <see cref="Error"/> instance representing a "Not Found" (404) HTTP status code.
     /// </summary>
-    /// <param name="translation"></param>
-    /// <param name="message"></param>
-    /// <returns></returns>
+    /// <param name="translation">An optional string providing a localized translation or description of the error. If <paramref
+    /// name="translation"/> is <see langword="null"/>, an empty string is used.</param>
+    /// <param name="message">An optional string containing additional details or context about the error. If <paramref name="message"/> is
+    /// <see langword="null"/>, an empty string is used.</param>
+    /// <returns>An <see cref="Error"/> object initialized with a 404 status code, the specified translation, and message.</returns>
     public static Error NotFound(string? translation = default, string? message = default)
         => new(StatusCodes.Status404NotFound, translation ?? string.Empty, message ?? string.Empty);
 
     /// <summary>
-    /// Method to create a <see cref="Error"/> instance as too many request
+    /// Creates an error representing a "Too Many Requests" (HTTP 429) response.
     /// </summary>
-    /// <param name="translation"></param>
-    /// <param name="message"></param>
-    /// <returns></returns>
+    /// <param name="translation">An optional translation string that provides additional context or localized information. If not specified, an
+    /// empty string is used.</param>
+    /// <param name="message">An optional message describing the error in more detail. If not specified, an empty string is used.</param>
+    /// <returns>An <see cref="Error"/> instance with a status code of 429 (Too Many Requests), containing the provided
+    /// translation and message.</returns>
     public static Error TooManyRequest(string? translation = default, string? message = default)
         => new(StatusCodes.Status429TooManyRequests, translation ?? string.Empty, message ?? string.Empty);
 
     /// <summary>
-    /// Method to create a <see cref="Error"/> instance as unauthorized
+    /// Creates an <see cref="Error"/> instance representing an unauthorized access error.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>An <see cref="Error"/> object with a status code of <see cref="StatusCodes.Status401Unauthorized"/>  and empty
+    /// message and details.</returns>
     public static Error Unauthorized()
         => new(StatusCodes.Status401Unauthorized, string.Empty, string.Empty);
 }
