@@ -150,10 +150,7 @@ public class Sender : ISender
 
         // Get behaviors using the concrete type instead of the interface type
         Type behaviorType = typeof(IPipelineBehavior<,>).MakeGenericType(concreteType, typeof(TResponse));
-        IEnumerable<object?> behaviors = _serviceProvider
-            .GetServices(behaviorType)
-            .Reverse();
-
+        IEnumerable<object?> behaviors = _serviceProvider.GetServices(behaviorType).Reverse();
         foreach (object? behavior in behaviors)
         {
             if (behavior is null)
@@ -218,6 +215,7 @@ public class Sender : ISender
             return task;
         };
 
+        // Get behaviors using the concrete type instead of the interface type
         Type pipelineInterfaceType = typeof(IPipelineBehavior<,>).MakeGenericType(concreteType, typeof(Result));
         IEnumerable<object?> behaviors = _serviceProvider.GetServices(pipelineInterfaceType).Reverse();
         foreach (object? behavior in behaviors)
