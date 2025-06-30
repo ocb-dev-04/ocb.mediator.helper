@@ -1,14 +1,12 @@
 ﻿using FluentValidation;
-using Microsoft.Extensions.DependencyInjection;
-using OCB.Mediator.Helper.Abstractions.Messaging;
-using OCB.Mediator.Helper.Abstractions.Notification;
-using OCB.Mediator.Helper.Abstractions.Pipelines;
-using OCB.Mediator.Helper.Abstractions.Sender;
-using OCB.Mediator.Helper.Implementations.Notification;
-using OCB.Mediator.Helper.Implementations.Sender;
-using System.ComponentModel.DataAnnotations;
 using System.Reflection;
-using static FluentValidation.AssemblyScanner;
+using OCB.Mediator.Helper.Abstractions.Sender;
+using Microsoft.Extensions.DependencyInjection;
+using OCB.Mediator.Helper.Implementations.Sender;
+using OCB.Mediator.Helper.Abstractions.Messaging;
+using OCB.Mediator.Helper.Abstractions.Pipelines;
+using OCB.Mediator.Helper.Abstractions.Notification;
+using OCB.Mediator.Helper.Implementations.Notification;
 
 namespace OCB.Mediator.Helper;
 
@@ -176,13 +174,7 @@ public static class MediatorServices
         Assembly assembly, 
         bool includeInternalTypes = false)
     {
-        AssemblyScanner validators = AssemblyScanner.FindValidatorsInAssembly(assembly, includeInternalTypes);
-        foreach (AssemblyScanResult result in validators)
-            services.AddScoped(result.InterfaceType, result.ValidatorType);
-        
-        //services.AddValidatorsFromAssembly(
-        //    assembly, 
-        //    includeInternalTypes: includeInternalTypes);
+        services.AddValidatorsFromAssembly(assembly, includeInternalTypes: includeInternalTypes);
 
         return services;
     }
@@ -202,11 +194,7 @@ public static class MediatorServices
         Assembly[] assemblies,
         bool includeInternalTypes = false)
     {
-        AssemblyScanner validators = AssemblyScanner.FindValidatorsInAssemblies(assemblies, includeInternalTypes);
-        foreach (AssemblyScanResult result in validators)
-            services.AddScoped(result.InterfaceType, result.ValidatorType);
-
-        //services.AddValidatorsFromAssemblies(assemblies, includeInternalTypes: includeInternalTypes);
+        services.AddValidatorsFromAssemblies(assemblies, includeInternalTypes: includeInternalTypes);
 
         return services;
     }
