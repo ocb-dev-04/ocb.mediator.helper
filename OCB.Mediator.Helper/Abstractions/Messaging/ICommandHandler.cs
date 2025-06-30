@@ -1,35 +1,45 @@
-﻿using Shared.Common.Helper.ErrorsHandler;
+﻿using OCB.Mediator.Helper.ResultPattern;
 
 namespace OCB.Mediator.Helper.Abstractions.Messaging;
 
 /// <summary>
-/// A <see cref="ICommandHandler{TCommand}"/> to use when endpoint doesn't return value
+/// Defines a contract for handling commands of type <typeparamref name="TCommand"/>.
 /// </summary>
-/// <typeparam name="TCommand"></typeparam>
+/// <remarks>Implementations of this interface are responsible for processing commands and returning a <see
+/// cref="Result"/>  indicating the outcome of the operation. This interface supports asynchronous execution and
+/// cancellation.</remarks>
+/// <typeparam name="TCommand">The type of command to be handled. Must implement the <see cref="ICommand"/> interface.</typeparam>
 public interface ICommandHandler<in TCommand> 
         where TCommand : ICommand
 {
     /// <summary>
-    /// Handle the <see cref="TCommand"/>
+    /// Handles the specified command and returns the result of the operation.
     /// </summary>
-    /// <param name="request"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
+    /// <param name="request">The command to be processed. Must not be null.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation.  The result contains the outcome of
+    /// processing the command.</returns>
     Task<Result> Handle(TCommand request, CancellationToken cancellationToken);
 }
 
 /// <summary>
-/// A <see cref="ICommandHandler{TCommand, TResponse}"/> to use when endpoint return an object of type <typeparamref name="TResponse"/> 
+/// Defines a contract for handling commands of type <typeparamref name="TCommand"/> and producing a response of type
+/// <typeparamref name="TResponse"/>.
 /// </summary>
-/// <typeparam name="TCommand"></typeparam>
+/// <remarks>Implementations of this interface are responsible for processing commands and returning a result
+/// encapsulating the response. This interface is typically used in command-based architectures to decouple command
+/// handling logic from other parts of the application.</remarks>
+/// <typeparam name="TCommand">The type of the command to be handled. Must implement <see cref="ICommand{TResponse}"/>.</typeparam>
+/// <typeparam name="TResponse">The type of the response produced by handling the command.</typeparam>
 public interface ICommandHandler<in TCommand, TResponse> 
         where TCommand : ICommand<TResponse>
 {
     /// <summary>
-    /// Handle the <see cref="TCommand"/> and returns an object of type <typeparamref name="TResponse"/>
+    /// Handles the specified command and returns the result of the operation.
     /// </summary>
-    /// <param name="request"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
+    /// <param name="request">The command to be handled. Cannot be <see langword="null"/>.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains a <see cref="Result{TResponse}"/>
+    /// indicating the outcome of the operation, including the response data if successful.</returns>
     Task<Result<TResponse>> Handle(TCommand request, CancellationToken cancellationToken);
 }

@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Application.UsesCases.Create;
 using Application.UsesCases.Delete;
 using Application.UsesCases.GetById;
-using Shared.Common.Helper.ErrorsHandler;
+using OCB.Mediator.Helper.ResultPattern;
 using OCB.Mediator.Helper.Abstractions.Sender;
 
 WebApplicationBuilder? builder = WebApplication.CreateBuilder(args);
@@ -63,4 +63,12 @@ app.MapDelete("todos", async (
 
 app.Run();
 
+/// <summary>
+/// Represents a request to create a new entity with a name and description.
+/// </summary>
+/// <remarks>This record is typically used to encapsulate the data required for creating a new entity. Both <see
+/// cref="Name"/> and <see cref="Description"/> are required to provide meaningful context for the entity being
+/// created.</remarks>
+/// <param name="Name"></param>
+/// <param name="Description"></param>
 public record CreateRequest(string Name, string Description);
