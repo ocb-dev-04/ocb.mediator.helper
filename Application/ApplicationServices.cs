@@ -30,9 +30,11 @@ public static class ApplicationServices
     public static void AddApplicationServices(this IServiceCollection services)
     {
         services.AddMediatorHelperServices(typeof(ApplicationServices).Assembly)
+            .AddValidators(typeof(ApplicationServices).Assembly, true);
+
+        services
             .AddPipelineBehavior(typeof(LoggerPipelineBehavior<,>))
             .AddPipelineBehavior(typeof(ValidationPipelineBehavior<,>))
-            .AddNotificationPipelineBehavior(typeof(ExceptionHandlingNotificationPipelineBehavior<>))
-            .AddValidators(typeof(ApplicationServices).Assembly, true);
+            .AddNotificationPipelineBehavior(typeof(ExceptionHandlingNotificationPipelineBehavior<>));
     }
 }
