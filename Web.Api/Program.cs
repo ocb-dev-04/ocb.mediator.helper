@@ -63,4 +63,12 @@ app.MapDelete("todos", async (
 
 app.Run();
 
+/// <summary>
+/// Represents a request to create a new entity with a name and description.
+/// </summary>
+/// <remarks>This record is typically used to encapsulate the data required for creating a new entity. Both <see
+/// cref="Name"/> and <see cref="Description"/> are required to provide meaningful context for the entity being
+/// created.</remarks>
+/// <param name="Name"></param>
+/// <param name="Description"></param>
 public record CreateRequest(string Name, string Description);

@@ -23,18 +23,6 @@ public interface ISender
     Task<Result<TResponse>> Send<TResponse>(IQuery<TResponse> query, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Sends the specified command for processing asynchronously.
-    /// </summary>
-    /// <remarks>This method dispatches the given command to the appropriate handler and returns a result
-    /// indicating the outcome of the operation.  The operation can be canceled by providing a cancellation
-    /// token.</remarks>
-    /// <param name="command">The command to be sent for processing. Cannot be null.</param>
-    /// <param name="cancellationToken">A token to monitor for cancellation requests. Defaults to <see langword="default"/> if not provided.</param>
-    /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation. The result contains the outcome of the
-    /// command processing.</returns>
-    Task<Result> Send(ICommand command, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Sends a command to the appropriate handler and returns the result.
     /// </summary>
     /// <typeparam name="TResponse">The type of the response expected from the command.</typeparam>
