@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using System.Collections.Concurrent;
 using OCB.Mediator.Helper.ResultPattern;
 using OCB.Mediator.Helper.Abstractions.Sender;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,119 +11,68 @@ namespace OCB.Mediator.Helper.Implementations.Sender;
 /// <see cref="ISender"/> implementation
 /// </summary>
 /// <remarks>The <see cref="Sender"/> class acts as a mediator for processing requests such as queries and
-/// commands. It resolves  the appropriate handler for each request type using dependency injection and executes the
-/// handler, optionally applying  pipeline behaviors. This class supports caching of compiled handlers to improve
-/// performance during repeated dispatches.</remarks>
+/// commands. It resolves the appropriate handler for each request type using dependency injection and executes the
+/// handler, optionally applying pipeline behaviors. This implementation uses direct reflection without caching
+/// for minimal memory footprint.</remarks>
 public class Sender : ISender
 {
     private readonly IServiceProvider _serviceProvider;
-
-    // Cache para métodos compilados (más eficiente que delegates completos)
-    private static readonly ConcurrentDictionary<Type, CompiledHandler> _compiledHandlers = new();
-    private static readonly ConcurrentDictionary<Type, CompiledMethod> _handleMethods = new();
-    private static readonly ConcurrentDictionary<Type, CompiledMethod> _behaviorMethods = new();
 
     public Sender(IServiceProvider serviceProvider)
         => _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 
     public Task<Result<TResponse>> Send<TResponse>(IQuery<TResponse> query, CancellationToken cancellationToken = default)
-        => DispatchOptimized<TResponse>(query, cancellationToken);
+        => DispatchDirect<TResponse>(query, cancellationToken);
 
     public Task<Result<TResponse>> Send<TResponse>(ICommand<TResponse> command, CancellationToken cancellationToken = default)
-        => DispatchOptimized<TResponse>(command, cancellationToken);
+        => DispatchDirect<TResponse>(command, cancellationToken);
 
-    private Task<Result<TResponse>> DispatchOptimized<TResponse>(object request, CancellationToken cancellationToken)
+    /// <summary>
+    /// Dispatches a request directly to its handler using reflection without caching.
+    /// </summary>
+    /// <remarks>This method performs type resolution and method discovery on each call,
+    /// trading performance for reduced memory usage and avoiding potential cache-related memory leaks.</remarks>
+    private Task<Result<TResponse>> DispatchDirect<TResponse>(object request, CancellationToken cancellationToken)
     {
         Type requestType = request.GetType();
 
-        // Cache del handler compilado (sin delegates pesados)
-        CompiledHandler compiledHandler = _compiledHandlers.GetOrAdd(requestType, static type =>
-        {
-            Type handlerInterface;
+        // Resolve handler interface through reflection (no caching)
+        Type handlerInterface = ResolveHandlerInterface<TResponse>(requestType);
 
-            // Buscar interfaz IQuery<TResponse>
-            Type? queryInterface = type.GetInterfaces()
-                .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IQuery<>));
+        // Get handler instance from DI container
+        object handler = _serviceProvider.GetRequiredService(handlerInterface);
 
-            if (queryInterface != null)
-            {
-                Type queryType = queryInterface.GetGenericArguments()[0];
-                handlerInterface = typeof(IQueryHandler<,>).MakeGenericType(type, queryType);
-            }
-            else
-            {
-                // Buscar interfaz ICommand<TResponse>
-                Type? commandInterface = type.GetInterfaces()
-                    .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICommand<>));
+        // Get Handle method via reflection
+        MethodInfo handleMethod = handlerInterface.GetMethod("Handle")
+            ?? throw new InvalidOperationException($"Handle method not found in handler: {handlerInterface.FullName}");
 
-                if (commandInterface != null)
-                {
-                    Type commandType = commandInterface.GetGenericArguments()[0];
-                    handlerInterface = typeof(ICommandHandler<,>).MakeGenericType(type, commandType);
-                }
-                else
-                {
-                    throw new InvalidOperationException($"Unsupported request type: {type.Name}. Must implement IQuery<TResponse> or ICommand<TResponse>");
-                }
-            }
-
-            // Obtener el response type para el behavior
-            Type responseType = handlerInterface.GetGenericArguments()[1];
-            Type behaviorType = typeof(IPipelineBehavior<,>).MakeGenericType(type, responseType);
-
-            return new CompiledHandler(handlerInterface, behaviorType);
-        });
-
-        return InvokeOptimized<TResponse>(compiledHandler, request, cancellationToken);
-    }
-
-    private Task<Result<TResponse>> InvokeOptimized<TResponse>(CompiledHandler compiledHandler, object request, CancellationToken cancellationToken)
-    {
-        // Resolver handler
-        object handler = _serviceProvider.GetRequiredService(compiledHandler.HandlerInterface);
-
-        // Extraer el response type del handler interface
-        Type responseType = compiledHandler.HandlerInterface.GetGenericArguments()[1];
-
-        // Cache del método Handle
-        CompiledMethod handleMethod = _handleMethods.GetOrAdd(compiledHandler.HandlerInterface, static type =>
-        {
-            MethodInfo? method = type.GetMethod("Handle");
-            if (method == null)
-                throw new InvalidOperationException($"Handle method not found in handler: {type.FullName}");
-            return new CompiledMethod(method);
-        });
-
-        // Crear delegate del handler principal
+        // Create base handler delegate
         RequestHandlerDelegate<TResponse> handlerDelegate = () =>
         {
-            object? result = handleMethod.Method.Invoke(handler, new object[] { request, cancellationToken });
+            object? result = handleMethod.Invoke(handler, new object[] { request, cancellationToken });
             if (result is not Task<Result<TResponse>> task)
-                throw new InvalidOperationException($"Handle method did not return Task<Result<{responseType.Name}>>");
+                throw new InvalidOperationException($"Handle method did not return Task<Result<{typeof(TResponse).Name}>>");
             return task;
         };
 
-        // Aplicar behaviors (optimizado)
-        var behaviors = _serviceProvider.GetServices(compiledHandler.BehaviorType);
+        // Apply pipeline behaviors (resolved fresh each time)
+        Type behaviorType = typeof(IPipelineBehavior<,>).MakeGenericType(requestType, typeof(TResponse));
+        var behaviors = _serviceProvider.GetServices(behaviorType);
+
         foreach (object behavior in behaviors.Reverse())
         {
             if (behavior == null) continue;
 
-            // Cache del método Handle del behavior
-            CompiledMethod behaviorMethod = _behaviorMethods.GetOrAdd(compiledHandler.BehaviorType, static type =>
-            {
-                MethodInfo? method = type.GetMethod("Handle");
-                if (method == null)
-                    throw new InvalidOperationException($"Handle method not found on behavior type {type.FullName}");
-                return new CompiledMethod(method);
-            });
+            // Get behavior Handle method via reflection
+            MethodInfo behaviorMethod = behaviorType.GetMethod("Handle")
+                ?? throw new InvalidOperationException($"Handle method not found on behavior type {behaviorType.FullName}");
 
             RequestHandlerDelegate<TResponse> currentDelegate = handlerDelegate;
             handlerDelegate = () =>
             {
-                object? result = behaviorMethod.Method.Invoke(behavior, new object[] { request, cancellationToken, currentDelegate });
+                object? result = behaviorMethod.Invoke(behavior, new object[] { request, cancellationToken, currentDelegate });
                 if (result is not Task<Result<TResponse>> task)
-                    throw new InvalidOperationException($"Handle method did not return Task<Result<{responseType.Name}>>");
+                    throw new InvalidOperationException($"Handle method did not return Task<Result<{typeof(TResponse).Name}>>");
                 return task;
             };
         }
@@ -132,9 +80,34 @@ public class Sender : ISender
         return handlerDelegate();
     }
 
-    // Structs ligeros para el cache (mucho más eficientes que delegates)
-    private readonly record struct CompiledHandler(Type HandlerInterface, Type BehaviorType);
-    private readonly record struct CompiledMethod(MethodInfo Method);
-}
+    /// <summary>
+    /// Resolves the appropriate handler interface for the given request type.
+    /// </summary>
+    /// <remarks>This method uses reflection to determine whether the request implements
+    /// IQuery&lt;TResponse&gt; or ICommand&lt;TResponse&gt; and returns the corresponding handler interface.</remarks>
+    private static Type ResolveHandlerInterface<TResponse>(Type requestType)
+    {
+        // Check for IQuery<TResponse> interface
+        Type? queryInterface = requestType.GetInterfaces()
+            .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IQuery<>));
 
-// Usar el delegate existente: OCB.Mediator.Helper.Abstractions.Pipelines.RequestHandlerDelegate<TResponse>
+        if (queryInterface != null)
+        {
+            Type responseType = queryInterface.GetGenericArguments()[0];
+            return typeof(IQueryHandler<,>).MakeGenericType(requestType, responseType);
+        }
+
+        // Check for ICommand<TResponse> interface
+        Type? commandInterface = requestType.GetInterfaces()
+            .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICommand<>));
+
+        if (commandInterface != null)
+        {
+            Type responseType = commandInterface.GetGenericArguments()[0];
+            return typeof(ICommandHandler<,>).MakeGenericType(requestType, responseType);
+        }
+
+        throw new InvalidOperationException(
+            $"Unsupported request type: {requestType.Name}. Must implement IQuery<TResponse> or ICommand<TResponse>");
+    }
+}

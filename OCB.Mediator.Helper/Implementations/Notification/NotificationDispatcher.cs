@@ -1,30 +1,26 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using OCB.Mediator.Helper.Abstractions.Messaging;
-using OCB.Mediator.Helper.Abstractions.Notification;
-using OCB.Mediator.Helper.Abstractions.Pipelines;
-using OCB.Mediator.Helper.Abstractions.Sender;
-using Polly;
-using System.Collections.Concurrent;
-using System.Diagnostics;
+﻿using Polly;
 using System.Reflection;
+using System.Diagnostics;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
+using OCB.Mediator.Helper.Abstractions.Pipelines;
+using OCB.Mediator.Helper.Abstractions.Notification;
 
 namespace OCB.Mediator.Helper.Implementations.Notification;
 
 /// <summary>
-/// Provides functionality to dispatch notifications to their respective handlers,  with optional retry and pipeline
+/// Provides functionality to dispatch notifications to their respective handlers, with optional retry and pipeline
 /// behaviors.
 /// </summary>
-/// <remarks>The <see cref="NotificationDispatcher"/> is responsible for resolving notification handlers  and
-/// invoking them asynchronously. It supports retry policies for transient failures and  allows the use of pipeline
-/// behaviors to modify or extend the dispatch process.</remarks>
+/// <remarks>The <see cref="NotificationDispatcher"/> is responsible for resolving notification handlers and
+/// invoking them asynchronously. It supports retry policies for transient failures and allows the use of pipeline
+/// behaviors to modify or extend the dispatch process. This implementation uses direct reflection without caching
+/// for minimal memory footprint.</remarks>
 internal sealed class NotificationDispatcher : INotificationDispatcher
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<NotificationDispatcher> _logger;
     private readonly AsyncPolicy _retryPolicy;
-
-    private static readonly ConcurrentDictionary<Type, NotificationDispatchInfo> _cachedDispatchInfo = new();
 
     public NotificationDispatcher(
         IServiceProvider serviceProvider,
@@ -66,7 +62,7 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
 
         using IServiceScope scope = _serviceProvider.CreateScope();
 
-        Func<Task> handlerInvocation = () => DispatchToHandlersOptimized(scope.ServiceProvider, notification, cancellationToken);
+        Func<Task> handlerInvocation = () => DispatchToHandlersDirect(scope.ServiceProvider, notification, cancellationToken);
 
         if (usePipeline)
         {
@@ -91,7 +87,12 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
             typeof(TNotification).Name, stopwatch.ElapsedMilliseconds);
     }
 
-    private async Task DispatchToHandlersOptimized<TNotification>(
+    /// <summary>
+    /// Dispatches notification to handlers using direct reflection without caching.
+    /// </summary>
+    /// <remarks>This method resolves handler interface and HandleAsync method via reflection on each call,
+    /// trading performance for reduced memory usage and avoiding potential cache-related memory leaks.</remarks>
+    private async Task DispatchToHandlersDirect<TNotification>(
         IServiceProvider serviceProvider,
         TNotification notification,
         CancellationToken cancellationToken)
@@ -99,31 +100,29 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
     {
         Type notificationType = typeof(TNotification);
 
-        NotificationDispatchInfo dispatchInfo = _cachedDispatchInfo.GetOrAdd(notificationType, static type =>
-        {
-            Type handlerInterface = typeof(INotificationHandler<>).MakeGenericType(type);
-            MethodInfo? handleMethod = handlerInterface.GetMethod("HandleAsync");
+        // Resolve handler interface through reflection (no caching)
+        Type handlerInterface = typeof(INotificationHandler<>).MakeGenericType(notificationType);
 
-            if (handleMethod == null)
-                throw new InvalidOperationException($"HandleAsync method not found in {handlerInterface.FullName}");
+        // Get HandleAsync method via reflection
+        MethodInfo handleMethod = handlerInterface.GetMethod("HandleAsync")
+            ?? throw new InvalidOperationException($"HandleAsync method not found in {handlerInterface.FullName}");
 
-            return new NotificationDispatchInfo(handlerInterface, handleMethod);
-        });
+        // Resolve all handlers for this notification type
+        var handlers = serviceProvider.GetServices(handlerInterface);
 
-        var handlers = serviceProvider.GetServices(dispatchInfo.HandlerInterface);
+        // Create and execute tasks for each handler
         List<Task> tasks = new();
         foreach (object? handler in handlers)
         {
             if (handler == null) continue;
 
-            object? result = dispatchInfo.HandleMethod.Invoke(handler, new object[] { notification, cancellationToken });
+            object? result = handleMethod.Invoke(handler, new object[] { notification, cancellationToken });
             if (result is Task task)
                 tasks.Add(task);
         }
 
+        // Execute all handler tasks concurrently
         if (tasks.Count > 0)
             await Task.WhenAll(tasks);
     }
-
-    private readonly record struct NotificationDispatchInfo(Type HandlerInterface, MethodInfo HandleMethod);
 }
