@@ -18,126 +18,113 @@ namespace OCB.Mediator.Helper.Implementations.Sender;
 public class Sender : ISender
 {
     private readonly IServiceProvider _serviceProvider;
-    private static readonly ConcurrentDictionary<Type, Delegate> _compiledHandlers
-        = new();
 
-    /// <summary>
-    /// <see cref="Sender"/> public constructor.
-    /// </summary>
-    /// <param name="serviceProvider">The service provider used to resolve dependencies. Cannot be <see langword="null"/>.</param>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="serviceProvider"/> is <see langword="null"/>.</exception>
+    // Cache para métodos compilados (más eficiente que delegates completos)
+    private static readonly ConcurrentDictionary<Type, CompiledHandler> _compiledHandlers = new();
+    private static readonly ConcurrentDictionary<Type, CompiledMethod> _handleMethods = new();
+    private static readonly ConcurrentDictionary<Type, CompiledMethod> _behaviorMethods = new();
+
     public Sender(IServiceProvider serviceProvider)
         => _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 
-    /// <inheritdoc/>
     public Task<Result<TResponse>> Send<TResponse>(IQuery<TResponse> query, CancellationToken cancellationToken = default)
-        => Dispatch<TResponse>(query.GetType(), query, cancellationToken);
+        => DispatchOptimized<TResponse>(query, cancellationToken);
 
-    /// <inheritdoc/>
     public Task<Result<TResponse>> Send<TResponse>(ICommand<TResponse> command, CancellationToken cancellationToken = default)
-        => Dispatch<TResponse>(command.GetType(), command, cancellationToken);
+        => DispatchOptimized<TResponse>(command, cancellationToken);
 
-    #region Dispatch for caching
-
-    /// <summary>
-    /// Dispatches a request to the appropriate handler and executes it, returning the result.
-    /// </summary>
-    /// <remarks>This method uses a caching mechanism to store compiled handlers for request types, improving
-    /// performance by avoiding repeated handler resolution. The handler is invoked with a pipeline, which may include
-    /// additional processing steps such as validation or logging.</remarks>
-    /// <typeparam name="TResponse">The type of the response expected from the handler.</typeparam>
-    /// <param name="requestType">The type of the request to be dispatched. This is used to locate the appropriate handler.</param>
-    /// <param name="request">The request object to be processed by the handler. Cannot be null.</param>
-    /// <param name="cancellationToken">A token to monitor for cancellation requests. The operation will be canceled if the token is triggered.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains a <see cref="Result{TResponse}"/>
-    /// object representing the outcome of the request processing.</returns>
-    private Task<Result<TResponse>> Dispatch<TResponse>(Type requestType, object request, CancellationToken cancellationToken)
+    private Task<Result<TResponse>> DispatchOptimized<TResponse>(object request, CancellationToken cancellationToken)
     {
-        Func<IServiceProvider, object, CancellationToken, Task<Result<TResponse>>>? func = (Func<IServiceProvider, object, CancellationToken, Task<Result<TResponse>>>)
-            _compiledHandlers.GetOrAdd(requestType, static type =>
-            {
-                return new Func<IServiceProvider, object, CancellationToken, Task<Result<TResponse>>>(
-                    (sp, req, ct) =>
-                    {
-                        Sender sender = (Sender)sp.GetRequiredService(typeof(Sender));
-                        return sender.InvokeWithPipeline<TResponse>(type, req, ct);
-                    });
-            });
+        Type requestType = request.GetType();
 
-        return func(_serviceProvider, request, cancellationToken);
+        // Cache del handler compilado (sin delegates pesados)
+        CompiledHandler compiledHandler = _compiledHandlers.GetOrAdd(requestType, static type =>
+        {
+            Type handlerInterface;
+
+            // Buscar interfaz IQuery<TResponse>
+            Type? queryInterface = type.GetInterfaces()
+                .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IQuery<>));
+
+            if (queryInterface != null)
+            {
+                Type queryType = queryInterface.GetGenericArguments()[0];
+                handlerInterface = typeof(IQueryHandler<,>).MakeGenericType(type, queryType);
+            }
+            else
+            {
+                // Buscar interfaz ICommand<TResponse>
+                Type? commandInterface = type.GetInterfaces()
+                    .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICommand<>));
+
+                if (commandInterface != null)
+                {
+                    Type commandType = commandInterface.GetGenericArguments()[0];
+                    handlerInterface = typeof(ICommandHandler<,>).MakeGenericType(type, commandType);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Unsupported request type: {type.Name}. Must implement IQuery<TResponse> or ICommand<TResponse>");
+                }
+            }
+
+            // Obtener el response type para el behavior
+            Type responseType = handlerInterface.GetGenericArguments()[1];
+            Type behaviorType = typeof(IPipelineBehavior<,>).MakeGenericType(type, responseType);
+
+            return new CompiledHandler(handlerInterface, behaviorType);
+        });
+
+        return InvokeOptimized<TResponse>(compiledHandler, request, cancellationToken);
     }
 
-    #endregion
-
-    #region Invoke methods
-
-    /// <summary>
-    /// Invokes a request handler with an optional pipeline of behaviors, processing the specified request and returning
-    /// a result.
-    /// </summary>
-    /// <remarks>This method dynamically resolves the appropriate handler and pipeline behaviors for the given
-    /// request type using dependency injection. It ensures that the handler and behaviors conform to the expected
-    /// interfaces and return valid results.</remarks>
-    /// <typeparam name="TResponse">The type of the response returned by the handler.</typeparam>
-    /// <param name="concreteType">The concrete type of the request being processed. Must implement either <see cref="IQuery{TResponse}"/> or <see
-    /// cref="ICommand{TResponse}"/>.</param>
-    /// <param name="request">The request object to be handled. Cannot be <see langword="null"/>.</param>
-    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-    /// <returns>A task representing the asynchronous operation, containing the result of type <typeparamref name="TResponse"/>.</returns>
-    /// <exception cref="InvalidOperationException">Thrown if the request type is unsupported, the handler interface or method cannot be resolved, or the handler or
-    /// pipeline behavior returns an invalid result.</exception>
-    private Task<Result<TResponse>> InvokeWithPipeline<TResponse>(Type concreteType, object request, CancellationToken cancellationToken)
+    private Task<Result<TResponse>> InvokeOptimized<TResponse>(CompiledHandler compiledHandler, object request, CancellationToken cancellationToken)
     {
-        Type? handlerInterface;
-        if (typeof(IQuery<TResponse>).IsAssignableFrom(concreteType))
-            handlerInterface = typeof(IQueryHandler<,>).MakeGenericType(concreteType, typeof(TResponse));
-        else if (typeof(ICommand<TResponse>).IsAssignableFrom(concreteType))
-            handlerInterface = typeof(ICommandHandler<,>).MakeGenericType(concreteType, typeof(TResponse));
-        else
-            throw new InvalidOperationException($"Unsupported request type: {concreteType.Name}");
+        // Resolver handler
+        object handler = _serviceProvider.GetRequiredService(compiledHandler.HandlerInterface);
 
-        if (handlerInterface is null)
-            throw new InvalidOperationException($"Handler interface not found for request type: {concreteType.FullName}");
+        // Extraer el response type del handler interface
+        Type responseType = compiledHandler.HandlerInterface.GetGenericArguments()[1];
 
-        object handler = _serviceProvider.GetRequiredService(handlerInterface);
-        MethodInfo? method = handlerInterface.GetMethod("Handle");
-        if (method is null)
-            throw new InvalidOperationException($"Handle method not found in handler: {handlerInterface.FullName}");
+        // Cache del método Handle
+        CompiledMethod handleMethod = _handleMethods.GetOrAdd(compiledHandler.HandlerInterface, static type =>
+        {
+            MethodInfo? method = type.GetMethod("Handle");
+            if (method == null)
+                throw new InvalidOperationException($"Handle method not found in handler: {type.FullName}");
+            return new CompiledMethod(method);
+        });
 
+        // Crear delegate del handler principal
         RequestHandlerDelegate<TResponse> handlerDelegate = () =>
         {
-            object? result = method.Invoke(handler, new object[] { request, cancellationToken })!;
-            if (result is null)
-                throw new InvalidOperationException($"Handle method returned null for handler type {handlerInterface.FullName}");
-
+            object? result = handleMethod.Method.Invoke(handler, new object[] { request, cancellationToken });
             if (result is not Task<Result<TResponse>> task)
-                throw new InvalidOperationException($"Handle method did not return Task<Result<{typeof(TResponse).Name}>> for handler type {handlerInterface.FullName}");
-
+                throw new InvalidOperationException($"Handle method did not return Task<Result<{responseType.Name}>>");
             return task;
         };
 
-        // Get behaviors using the concrete type instead of the interface type
-        Type behaviorType = typeof(IPipelineBehavior<,>).MakeGenericType(concreteType, typeof(TResponse));
-        IEnumerable<object?> behaviors = _serviceProvider.GetServices(behaviorType).Reverse();
-        foreach (object? behavior in behaviors)
+        // Aplicar behaviors (optimizado)
+        var behaviors = _serviceProvider.GetServices(compiledHandler.BehaviorType);
+        foreach (object behavior in behaviors.Reverse())
         {
-            if (behavior is null)
-                continue;
+            if (behavior == null) continue;
+
+            // Cache del método Handle del behavior
+            CompiledMethod behaviorMethod = _behaviorMethods.GetOrAdd(compiledHandler.BehaviorType, static type =>
+            {
+                MethodInfo? method = type.GetMethod("Handle");
+                if (method == null)
+                    throw new InvalidOperationException($"Handle method not found on behavior type {type.FullName}");
+                return new CompiledMethod(method);
+            });
 
             RequestHandlerDelegate<TResponse> currentDelegate = handlerDelegate;
             handlerDelegate = () =>
             {
-                MethodInfo? handleMethod = behaviorType.GetMethod("Handle");
-                if (handleMethod == null)
-                    throw new InvalidOperationException($"Handle method not found on behavior type {behaviorType.FullName}");
-
-                object? result = handleMethod.Invoke(behavior, new object[] { request, cancellationToken, currentDelegate });
-                if (result is null)
-                    throw new InvalidOperationException($"Handle method returned null for behavior type {behaviorType.FullName}");
-
+                object? result = behaviorMethod.Method.Invoke(behavior, new object[] { request, cancellationToken, currentDelegate });
                 if (result is not Task<Result<TResponse>> task)
-                    throw new InvalidOperationException($"Handle method did not return Task<Result<{typeof(TResponse).Name}>> for behavior type {behaviorType.FullName}");
-
+                    throw new InvalidOperationException($"Handle method did not return Task<Result<{responseType.Name}>>");
                 return task;
             };
         }
@@ -145,5 +132,9 @@ public class Sender : ISender
         return handlerDelegate();
     }
 
-    #endregion
+    // Structs ligeros para el cache (mucho más eficientes que delegates)
+    private readonly record struct CompiledHandler(Type HandlerInterface, Type BehaviorType);
+    private readonly record struct CompiledMethod(MethodInfo Method);
 }
+
+// Usar el delegate existente: OCB.Mediator.Helper.Abstractions.Pipelines.RequestHandlerDelegate<TResponse>

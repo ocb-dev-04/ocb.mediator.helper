@@ -42,19 +42,16 @@ public static class MediatorServices
         services.Scan(scan => scan.FromAssemblies(new[] { assembly })
             .AddClasses(clases => clases.AssignableTo(typeof(IQueryHandler<,>)), publicOnly: false)
                 .AsImplementedInterfaces()
-                .WithScopedLifetime()
-            .AddClasses(clases => clases.AssignableTo(typeof(ICommandHandler<>)), publicOnly: false)
-                .AsImplementedInterfaces()
-                .WithScopedLifetime()
+                .WithTransientLifetime()
             .AddClasses(clases => clases.AssignableTo(typeof(ICommandHandler<,>)), publicOnly: false)
                 .AsImplementedInterfaces()
-                .WithScopedLifetime()
+                .WithTransientLifetime()
         );
 
         services.Scan(scan => scan.FromAssemblies(new[] { assembly })
             .AddClasses(c => c.AssignableTo(typeof(INotificationHandler<>)), publicOnly: false)
             .AsImplementedInterfaces()
-            .WithScopedLifetime());
+            .WithTransientLifetime());
 
         return services;
     }
@@ -84,19 +81,16 @@ public static class MediatorServices
         services.Scan(scan => scan.FromAssemblies(assemblies)
             .AddClasses(clases => clases.AssignableTo(typeof(IQueryHandler<,>)), publicOnly: false)
                 .AsImplementedInterfaces()
-                .WithScopedLifetime()
-            .AddClasses(clases => clases.AssignableTo(typeof(ICommandHandler<>)), publicOnly: false)
-                .AsImplementedInterfaces()
-                .WithScopedLifetime()
+                .WithTransientLifetime()
             .AddClasses(clases => clases.AssignableTo(typeof(ICommandHandler<,>)), publicOnly: false)
                 .AsImplementedInterfaces()
-                .WithScopedLifetime()
+                .WithTransientLifetime()
         );
 
         services.Scan(scan => scan.FromAssemblies(assemblies)
             .AddClasses(c => c.AssignableTo(typeof(INotificationHandler<>)), publicOnly: false)
             .AsImplementedInterfaces()
-            .WithScopedLifetime());
+            .WithTransientLifetime());
 
         return services;
     }

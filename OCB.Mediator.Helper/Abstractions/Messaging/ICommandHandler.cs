@@ -3,26 +3,6 @@
 namespace OCB.Mediator.Helper.Abstractions.Messaging;
 
 /// <summary>
-/// Defines a contract for handling commands of type <typeparamref name="TCommand"/>.
-/// </summary>
-/// <remarks>Implementations of this interface are responsible for processing commands and returning a <see
-/// cref="Result"/>  indicating the outcome of the operation. This interface supports asynchronous execution and
-/// cancellation.</remarks>
-/// <typeparam name="TCommand">The type of command to be handled. Must implement the <see cref="ICommand"/> interface.</typeparam>
-public interface ICommandHandler<in TCommand> 
-        where TCommand : ICommand
-{
-    /// <summary>
-    /// Handles the specified command and returns the result of the operation.
-    /// </summary>
-    /// <param name="request">The command to be processed. Must not be null.</param>
-    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-    /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation.  The result contains the outcome of
-    /// processing the command.</returns>
-    Task<Result> Handle(TCommand request, CancellationToken cancellationToken);
-}
-
-/// <summary>
 /// Defines a contract for handling commands of type <typeparamref name="TCommand"/> and producing a response of type
 /// <typeparamref name="TResponse"/>.
 /// </summary>
