@@ -103,11 +103,11 @@ public static class MediatorServices
     /// that are executed during the processing of requests and responses.</remarks>
     /// <param name="services">The <see cref="IServiceCollection"/> to which the pipeline behavior will be added.</param>
     /// <param name="behaviorType">The type of the pipeline behavior to register. Must be an open generic type that implements <see
-    /// cref="IPipelineBehavior{TRequest, TResponse}"/>.</param>
+    /// cref="IRequestPipelineBehavior{TRequest, TResponse}"/>.</param>
     /// <returns>The updated <see cref="IServiceCollection"/> instance.</returns>
     /// <exception cref="ArgumentException">Thrown if <paramref name="behaviorType"/> is not an open generic type or does not implement <see
-    /// cref="IPipelineBehavior{TRequest, TResponse}"/>.</exception>
-    public static IServiceCollection AddPipelineBehavior(
+    /// cref="IRequestPipelineBehavior{TRequest, TResponse}"/>.</exception>
+    public static IServiceCollection AddRequestPipelineBehavior(
         this IServiceCollection services,
         Type behaviorType)
     {
@@ -115,10 +115,10 @@ public static class MediatorServices
             throw new ArgumentException("Only open generic types are allowed", nameof(behaviorType));
 
         if (!behaviorType.GetInterfaces()
-            .Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IPipelineBehavior<,>)))
-            throw new ArgumentException($"{behaviorType.Name} must implement IPipelineBehavior<,>", nameof(behaviorType));
+            .Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IRequestPipelineBehavior<,>)))
+            throw new ArgumentException($"{behaviorType.Name} must implement IRequestPipelineBehavior<,>", nameof(behaviorType));
 
-        Type interfaceType = typeof(IPipelineBehavior<,>);
+        Type interfaceType = typeof(IRequestPipelineBehavior<,>);
         services.AddScoped(interfaceType, behaviorType);
 
         return services;

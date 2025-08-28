@@ -14,7 +14,7 @@ namespace Application.Behaviors.HandlerPipelines;
 /// <typeparam name="TRequest">The type of the request being handled. Must be non-null.</typeparam>
 /// <typeparam name="TResponse">The type of the response returned by the handler. Must be non-null.</typeparam>
 public sealed class LoggerPipelineBehavior<TRequest, TResponse>
-    : IPipelineBehavior<TRequest, TResponse>
+    : IRequestPipelineBehavior<TRequest, TResponse>
         where TRequest : notnull
         where TResponse : notnull
 {

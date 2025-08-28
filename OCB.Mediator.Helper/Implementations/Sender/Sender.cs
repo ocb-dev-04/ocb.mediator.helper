@@ -56,7 +56,7 @@ public class Sender : ISender
         };
 
         // Apply pipeline behaviors (resolved fresh each time)
-        Type behaviorType = typeof(IPipelineBehavior<,>).MakeGenericType(requestType, typeof(TResponse));
+        Type behaviorType = typeof(IRequestPipelineBehavior<,>).MakeGenericType(requestType, typeof(TResponse));
         var behaviors = _serviceProvider.GetServices(behaviorType);
 
         foreach (object behavior in behaviors.Reverse())

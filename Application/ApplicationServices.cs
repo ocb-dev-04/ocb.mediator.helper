@@ -33,8 +33,8 @@ public static class ApplicationServices
             .AddValidators(typeof(ApplicationServices).Assembly, true);
 
         services
-            .AddPipelineBehavior(typeof(LoggerPipelineBehavior<,>))
-            .AddPipelineBehavior(typeof(ValidationPipelineBehavior<,>))
+            .AddRequestPipelineBehavior(typeof(LoggerPipelineBehavior<,>))
+            .AddRequestPipelineBehavior(typeof(ValidationPipelineBehavior<,>))
             .AddNotificationPipelineBehavior(typeof(ExceptionHandlingNotificationPipelineBehavior<>));
     }
 }
