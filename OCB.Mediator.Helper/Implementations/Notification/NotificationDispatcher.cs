@@ -16,7 +16,8 @@ namespace OCB.Mediator.Helper.Implementations.Notification;
 /// invoking them asynchronously. It supports retry policies for transient failures and allows the use of pipeline
 /// behaviors to modify or extend the dispatch process. This implementation uses direct reflection without caching
 /// for minimal memory footprint.</remarks>
-internal sealed class NotificationDispatcher : INotificationDispatcher
+internal sealed class NotificationDispatcher 
+    : INotificationDispatcher
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<NotificationDispatcher> _logger;
@@ -66,7 +67,7 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
 
         if (usePipeline)
         {
-            var behaviors = scope.ServiceProvider
+            IEnumerable<INotificationPipelineBehavior<TNotification>> behaviors = scope.ServiceProvider
                 .GetServices<INotificationPipelineBehavior<TNotification>>()
                 .Reverse();
 
@@ -84,7 +85,7 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
 
         stopwatch.Stop();
         _logger.LogInformation("--> DispatchAsync<{NotificationType}> took {ElapsedMilliseconds} ms",
-            typeof(TNotification).Name, stopwatch.ElapsedMilliseconds);
+            notification.GetType().Name, stopwatch.ElapsedMilliseconds);
     }
 
     /// <summary>
@@ -98,7 +99,7 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
         CancellationToken cancellationToken)
         where TNotification : INotification
     {
-        Type notificationType = typeof(TNotification);
+        Type notificationType = notification.GetType();
 
         // Resolve handler interface through reflection (no caching)
         Type handlerInterface = typeof(INotificationHandler<>).MakeGenericType(notificationType);
