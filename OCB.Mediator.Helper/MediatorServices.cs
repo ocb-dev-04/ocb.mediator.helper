@@ -51,7 +51,7 @@ public static class MediatorServices
         services.Scan(scan => scan.FromAssemblies(new[] { assembly })
             .AddClasses(c => c.AssignableTo(typeof(INotificationHandler<>)), publicOnly: false)
             .AsImplementedInterfaces()
-            .WithTransientLifetime());
+            .WithScopedLifetime());
 
         return services;
     }
