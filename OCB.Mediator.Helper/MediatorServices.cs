@@ -42,10 +42,10 @@ public static class MediatorServices
         services.Scan(scan => scan.FromAssemblies(new[] { assembly })
             .AddClasses(clases => clases.AssignableTo(typeof(IQueryHandler<,>)), publicOnly: false)
                 .AsImplementedInterfaces()
-                .WithTransientLifetime()
+                .WithScopedLifetime()
             .AddClasses(clases => clases.AssignableTo(typeof(ICommandHandler<,>)), publicOnly: false)
                 .AsImplementedInterfaces()
-                .WithTransientLifetime()
+                .WithScopedLifetime()
         );
 
         services.Scan(scan => scan.FromAssemblies(new[] { assembly })
@@ -81,16 +81,16 @@ public static class MediatorServices
         services.Scan(scan => scan.FromAssemblies(assemblies)
             .AddClasses(clases => clases.AssignableTo(typeof(IQueryHandler<,>)), publicOnly: false)
                 .AsImplementedInterfaces()
-                .WithTransientLifetime()
+                .WithScopedLifetime()
             .AddClasses(clases => clases.AssignableTo(typeof(ICommandHandler<,>)), publicOnly: false)
                 .AsImplementedInterfaces()
-                .WithTransientLifetime()
+                .WithScopedLifetime()
         );
 
         services.Scan(scan => scan.FromAssemblies(assemblies)
             .AddClasses(c => c.AssignableTo(typeof(INotificationHandler<>)), publicOnly: false)
             .AsImplementedInterfaces()
-            .WithTransientLifetime());
+            .WithScopedLifetime());
 
         return services;
     }
