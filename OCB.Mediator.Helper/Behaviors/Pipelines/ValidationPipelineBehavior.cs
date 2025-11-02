@@ -1,5 +1,4 @@
 ﻿using FluentValidation;
-using OCB.Mediator.Helper.ErrorHandler;
 using OCB.Mediator.Helper.ResultPattern;
 using OCB.Mediator.Helper.Abstractions.Pipelines;
 
@@ -46,21 +45,26 @@ public sealed class ValidationPipelineBehavior<TRequest, TResponse>
     /// <exception cref="Exceptions.ValidationException">Thrown when one or more validation errors are detected in the request.</exception>
     public async Task<Result<TResponse>> Handle(TRequest request, CancellationToken cancellationToken, RequestHandlerDelegate<TResponse> next)
     {
+        // If no validators, skip validation
         if (!_validators.Any())
             return await next();
 
-        ValidationError[] errors = _validators
-            .Select(async validator
-                => await validator.ValidateAsync(request))
-            .SelectMany(validationResult
-                => validationResult.Result.Errors)
-            .Where(validationFailure
-                => validationFailure is not null)
-            .Select(failure
-                => new ValidationError(failure.PropertyName, failure.ErrorMessage))
-            .Distinct()
-            .ToArray();
+        // Execute all validators asynchronously and await them properly
+        FluentValidation.Results.ValidationResult[] validationResults = await Task.WhenAll(
+            _validators.Select(validator => validator.ValidateAsync(request, cancellationToken))
+        );
 
+        // Group errors by property name
+        IDictionary<string, string[]> errors = validationResults
+            .SelectMany(result => result.Errors)
+            .Where(failure => failure is not null)
+            .GroupBy(failure => failure.PropertyName)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(failure => failure.ErrorMessage).Distinct().ToArray()
+            );
+
+        // If there are validation errors, throw exception
         if (errors.Any())
             throw new Exceptions.ValidationException(errors);
 

@@ -1,5 +1,3 @@
-using OCB.Mediator.Helper.ErrorHandler;
-
 namespace OCB.Mediator.Helper.Exceptions;
 
 /// <summary>
@@ -14,7 +12,7 @@ public sealed class ValidationException
     /// <see cref="ValidationException"/> public constructor
     /// </summary>
     /// <param name="errors"></param>
-    public ValidationException(IEnumerable<ValidationError> errors)
+    public ValidationException(IDictionary<string, string[]> errors)
     {
         Errors = errors;
     }
@@ -22,5 +20,5 @@ public sealed class ValidationException
     /// <summary>
     /// Gets a collection of validation errors associated with the current operation or object.
     /// </summary>
-    public IEnumerable<ValidationError> Errors { get; }
+    public IDictionary<string, string[]> Errors { get; }
 }
