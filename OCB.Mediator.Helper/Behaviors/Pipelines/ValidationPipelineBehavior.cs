@@ -60,7 +60,7 @@ public sealed class ValidationPipelineBehavior<TRequest, TResponse>
             .Where(failure => failure is not null)
             .GroupBy(failure => failure.PropertyName)
             .ToDictionary(
-                group => group.Key,
+                group => string.Concat(char.ToLowerInvariant(group.Key[0]), group.Key[1..]),
                 group => group.Select(failure => failure.ErrorMessage).Distinct().ToArray()
             );
 
