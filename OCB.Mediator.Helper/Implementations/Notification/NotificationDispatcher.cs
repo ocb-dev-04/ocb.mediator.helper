@@ -1,10 +1,15 @@
-﻿using Polly;
-using System.Reflection;
-using System.Diagnostics;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.DependencyInjection;
-using OCB.Mediator.Helper.Abstractions.Pipelines;
 using OCB.Mediator.Helper.Abstractions.Notification;
+using OCB.Mediator.Helper.Abstractions.Pipelines;
+using Polly;
+using Polly.Bulkhead;
+using Polly.CircuitBreaker;
+using Polly.Retry;
+using Polly.Timeout;
+using Polly.Wrap;
+using System.Diagnostics;
+using System.Reflection;
 
 namespace OCB.Mediator.Helper.Implementations.Notification;
 
@@ -21,7 +26,7 @@ internal sealed class NotificationDispatcher
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<NotificationDispatcher> _logger;
-    private readonly AsyncPolicy _retryPolicy;
+    private readonly AsyncPolicyWrap _resiliencePolicy;
 
     public NotificationDispatcher(
         IServiceProvider serviceProvider,
@@ -29,13 +34,68 @@ internal sealed class NotificationDispatcher
     {
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _retryPolicy = Policy
-            .Handle<Exception>()
+
+        // ⭐ 1. Timeout Policy
+        AsyncTimeoutPolicy timeoutPolicy = Policy
+            .TimeoutAsync(
+                timeout: TimeSpan.FromSeconds(30),
+                timeoutStrategy: TimeoutStrategy.Pessimistic,
+                onTimeoutAsync: (context, timeout, task) =>
+                {
+                    _logger.LogWarning(
+                        "--> [Timeout] Notification handler exceeded {Timeout}s",
+                        timeout.TotalSeconds);
+                    return Task.CompletedTask;
+                });
+
+        // ⭐ 2. Bulkhead (limitar concurrencia)
+        AsyncBulkheadPolicy bulkheadPolicy = Policy
+            .BulkheadAsync(
+                maxParallelization: 100,
+                maxQueuingActions: 50,
+                onBulkheadRejectedAsync: context =>
+                {
+                    _logger.LogWarning("--> [Bulkhead] Notification rejected - Too many concurrent dispatches");
+                    return Task.CompletedTask;
+                });
+
+        // ⭐ 3. Circuit Breaker
+        AsyncCircuitBreakerPolicy circuitBreakerPolicy = Policy
+            .Handle<Exception>(ex => !(ex is TimeoutRejectedException || ex is BulkheadRejectedException))
+            .CircuitBreakerAsync(
+                exceptionsAllowedBeforeBreaking: 5,
+                durationOfBreak: TimeSpan.FromSeconds(30),
+                onBreak: (exception, duration) =>
+                {
+                    _logger.LogError(exception,
+                        "--> [Circuit Breaker] OPEN for {Duration}s", duration.TotalSeconds);
+                },
+                onReset: () => _logger.LogInformation("--> [Circuit Breaker] CLOSED"),
+                onHalfOpen: () => _logger.LogInformation("--> [Circuit Breaker] HALF-OPEN"));
+
+        // ⭐ 4. Retry Policy
+        AsyncRetryPolicy retryPolicy = Policy
+            .Handle<Exception>(ex =>
+                !(ex is BrokenCircuitException ||
+                  ex is TimeoutRejectedException ||
+                  ex is BulkheadRejectedException))
             .WaitAndRetryAsync(
                 retryCount: 3,
-                sleepDurationProvider: attempt => TimeSpan.FromMilliseconds(250 * attempt),
-                onRetry: (exception, delay, retryCount, _)
-                    => logger.LogWarning(exception, "--> [Polly Retry] next in {Delay}ms", delay.TotalMilliseconds));
+                sleepDurationProvider: attempt => TimeSpan.FromMilliseconds(250 * Math.Pow(2, attempt - 1)),
+                onRetry: (exception, delay, retryCount, context) =>
+                {
+                    _logger.LogWarning(exception,
+                        "--> [Retry] Attempt {RetryCount}/3 in {Delay}ms",
+                        retryCount, delay.TotalMilliseconds);
+                });
+
+        // ⭐ Timeout → Bulkhead → Circuit Breaker → Retry
+        _resiliencePolicy = Policy.WrapAsync(
+            timeoutPolicy,
+            bulkheadPolicy,
+            circuitBreakerPolicy,
+            retryPolicy
+        );
     }
 
     public Task DispatchAsync<TNotification>(
@@ -79,7 +139,7 @@ internal sealed class NotificationDispatcher
         }
 
         if (useRetry)
-            await _retryPolicy.ExecuteAsync(handlerInvocation);
+            await _resiliencePolicy.ExecuteAsync(handlerInvocation);
         else
             await handlerInvocation();
 
