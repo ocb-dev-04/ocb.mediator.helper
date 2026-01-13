@@ -71,4 +71,23 @@ public record Error(int StatusCode, string Translation, string Description)
     /// message and details.</returns>
     public static Error Unauthorized()
         => new(StatusCodes.Status401Unauthorized, string.Empty, string.Empty);
+
+    /// <summary>
+    /// Creates an error representing an internal server error (HTTP status code 500).
+    /// </summary>
+    /// <param name="translation">An optional localized message describing the error. If null, an empty string is used.</param>
+    /// <param name="message">An optional detailed message providing additional information about the error. If null, an empty string is used.</param>
+    /// <returns>An <see cref="Error"/> instance with a status code of 500 (Internal Server Error).</returns>
+    public static Error InternalServerError(string? translation = default, string? message = default)
+        => new(StatusCodes.Status500InternalServerError, translation ?? string.Empty, message ?? string.Empty);
+
+    /// <summary>
+    /// Creates an error representing an internal server exception with the specified translation key and message.
+    /// </summary>
+    /// <param name="translation">The translation key that identifies the localized error message to display to the user. Cannot be null or empty.</param>
+    /// <param name="message">The detailed error message describing the exception. Cannot be null or empty.</param>
+    /// <returns>An Error object with a status code of 500 (Internal Server Error), containing the specified translation key and
+    /// message.</returns>
+    public static Error Exception(string translation, string message)
+        => new(StatusCodes.Status500InternalServerError, translation, message);
 }
