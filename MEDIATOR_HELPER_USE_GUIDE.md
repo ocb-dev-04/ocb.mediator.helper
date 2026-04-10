@@ -37,9 +37,88 @@ sealed record CreateItemCommand(string Name, string Description) : ICommand<Guid
 // Void return — use Unit
 sealed record DeleteItemCommand(Guid Id) : ICommand<Unit>;
 
-// Idempotent command (includes RequestId for deduplication)
-sealed record ProcessPaymentCommand(Guid RequestId, decimal Amount)
-    : IdempotentCommand<bool>(RequestId);
+// Idempotent command — no RequestId on the record itself
+sealed record ProcessPaymentCommand(decimal Amount)
+    : IdempotentCommand<bool>();
+```
+
+### IdempotentCommand and RequestId
+
+`IdempotentCommand<TResponse>` does **not** carry a `RequestId` property. The recommended approach is to resolve the idempotency key via a **scoped `RequiredHeaderProvider`** — a service registered per-request that reads the idempotency header (e.g., `Idempotency-Key`) once and exposes it as a `Guid`.
+
+```csharp
+// Provider interface
+public interface IIdempotencyKeyProvider
+{
+    Guid RequestId { get; }
+}
+
+// Implementation — reads the header on first access (scoped)
+internal sealed class IdempotencyKeyProvider : IIdempotencyKeyProvider
+{
+    private readonly IHttpContextAccessor _http;
+
+    public IdempotencyKeyProvider(IHttpContextAccessor http) => _http = http;
+
+    public Guid RequestId
+    {
+        get
+        {
+            var raw = _http.HttpContext?.Request.Headers["Idempotency-Key"].FirstOrDefault();
+            return Guid.TryParse(raw, out var id) ? id : Guid.Empty;
+        }
+    }
+}
+```
+
+```csharp
+// Register as scoped so each request gets its own instance
+services.AddHttpContextAccessor();
+services.AddScoped<IIdempotencyKeyProvider, IdempotencyKeyProvider>();
+```
+
+Then inject it inside the `IdempotencyPipelineBehavior` instead of relying on a property on the command:
+
+```csharp
+internal sealed class IdempotencyPipelineBehavior<TRequest, TResponse>
+    : IRequestPipelineBehavior<TRequest, TResponse>
+    where TRequest : IdempotentCommand<TResponse>
+{
+    private readonly IIdempotencyKeyProvider _keyProvider;
+    private readonly IIdempotencyStore _store;          // your store abstraction
+
+    public IdempotencyPipelineBehavior(
+        IIdempotencyKeyProvider keyProvider,
+        IIdempotencyStore store)
+    {
+        _keyProvider = keyProvider;
+        _store = store;
+    }
+
+    public async Task<Result<TResponse>> Handle(
+        TRequest request,
+        CancellationToken ct,
+        RequestHandlerDelegate<TResponse> next)
+    {
+        var requestId = _keyProvider.RequestId;
+
+        if (await _store.ExistsAsync(requestId, ct))
+            return await _store.GetAsync<TResponse>(requestId, ct);
+
+        var result = await next();
+
+        if (result.IsSuccess)
+            await _store.SaveAsync(requestId, result, ct);
+
+        return result;
+    }
+}
+```
+
+Register the behavior with the request pipeline:
+
+```csharp
+services.AddRequestPipelineBehavior(typeof(IdempotencyPipelineBehavior<,>));
 ```
 
 ```csharp
