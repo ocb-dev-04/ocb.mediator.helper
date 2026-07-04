@@ -13,9 +13,7 @@ namespace Web.Api.Controllers;
 [Produces("application/json")]
 public sealed class TodosController : BaseController
 {
-    public TodosController(
-        IHttpContextAccessor httpContextAccessor, 
-        ISender sender) : base(httpContextAccessor, sender)
+    public TodosController(ISender sender) : base(sender)
     {
     }
 

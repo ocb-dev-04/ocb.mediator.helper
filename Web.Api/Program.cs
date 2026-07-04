@@ -4,7 +4,6 @@ using Scalar.AspNetCore;
 WebApplicationBuilder? builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi()
-    .AddHttpContextAccessor()
     .AddControllers();
 
 builder.Services.AddApplicationServices();

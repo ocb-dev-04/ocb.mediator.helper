@@ -42,24 +42,23 @@ public sealed class LoggerPipelineBehavior<TRequest, TResponse>
     public async Task<Result<TResponse>> Handle(TRequest request, CancellationToken cancellationToken, RequestHandlerDelegate<TResponse> next)
     {
         string requestName = typeof(TRequest).Name;
-        DateTime startTime = DateTime.UtcNow;
-        Stopwatch stopwatch = Stopwatch.StartNew();
+        long startTimestamp = Stopwatch.GetTimestamp();
 
-        _logger.LogInformation("--> Handling {RequestName} at {TimestampUtc}", requestName, startTime);
+        _logger.LogInformation("--> Handling {RequestName} at {TimestampUtc}", requestName, DateTime.UtcNow);
 
         try
         {
             Result<TResponse> response = await next();
 
-            stopwatch.Stop();
-            _logger.LogInformation("--> Handled {RequestName} in {ElapsedMs}ms", requestName, stopwatch.ElapsedMilliseconds);
+            _logger.LogInformation("--> Handled {RequestName} in {ElapsedMs}ms",
+                requestName, Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds);
 
             return response;
         }
         catch (Exception ex)
         {
-            stopwatch.Stop();
-            _logger.LogError(ex, "--> Error handling {RequestName} after {ElapsedMs}ms", requestName, stopwatch.ElapsedMilliseconds);
+            _logger.LogError(ex, "--> Error handling {RequestName} after {ElapsedMs}ms",
+                requestName, Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds);
             throw;
         }
     }

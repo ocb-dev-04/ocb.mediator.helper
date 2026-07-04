@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-
-namespace OCB.Mediator.Helper.ResultPattern;
+﻿namespace OCB.Mediator.Helper.ResultPattern;
 
 /// <summary>
 /// Represents an error with an associated HTTP status code, translation key, and description.
@@ -15,8 +13,8 @@ namespace OCB.Mediator.Helper.ResultPattern;
 /// <param name="Description"></param>
 public record Error(int StatusCode, string Translation, string Description)
 {
-    public static Error None = new(0, string.Empty, string.Empty);
-    public static Error NullValue = new(500, "nullValue", "Null value was provided");
+    public static readonly Error None = new(0, string.Empty, string.Empty);
+    public static readonly Error NullValue = new(500, "nullValue", "Null value was provided");
 
     /// <summary>
     /// Creates an <see cref="Error"/> instance representing a "Not Modified" (HTTP 304) status.
@@ -28,7 +26,7 @@ public record Error(int StatusCode, string Translation, string Description)
     /// <returns>An <see cref="Error"/> object with a status code of 304 (Not Modified), and the specified translation and
     /// message values.</returns>
     public static Error NotModified(string? translation = default, string? message = default)
-        => new(StatusCodes.Status304NotModified, translation ?? string.Empty, message ?? string.Empty);
+        => new(304, translation ?? string.Empty, message ?? string.Empty);
 
     /// <summary>
     /// Creates an <see cref="Error"/> instance representing a 400 Bad Request HTTP status code.
@@ -40,7 +38,7 @@ public record Error(int StatusCode, string Translation, string Description)
     /// <returns>An <see cref="Error"/> object initialized with a 400 Bad Request status code, the specified translation key, and
     /// the specified error message.</returns>
     public static Error BadRequest(string? translation = default, string? message = default)
-        => new(StatusCodes.Status400BadRequest, translation ?? string.Empty, message ?? string.Empty);
+        => new(400, translation ?? string.Empty, message ?? string.Empty);
 
     /// <summary>
     /// Creates an <see cref="Error"/> instance representing a "Not Found" (404) HTTP status code.
@@ -51,7 +49,7 @@ public record Error(int StatusCode, string Translation, string Description)
     /// <see langword="null"/>, an empty string is used.</param>
     /// <returns>An <see cref="Error"/> object initialized with a 404 status code, the specified translation, and message.</returns>
     public static Error NotFound(string? translation = default, string? message = default)
-        => new(StatusCodes.Status404NotFound, translation ?? string.Empty, message ?? string.Empty);
+        => new(404, translation ?? string.Empty, message ?? string.Empty);
 
     /// <summary>
     /// Creates an error representing a "Too Many Requests" (HTTP 429) response.
@@ -62,15 +60,15 @@ public record Error(int StatusCode, string Translation, string Description)
     /// <returns>An <see cref="Error"/> instance with a status code of 429 (Too Many Requests), containing the provided
     /// translation and message.</returns>
     public static Error TooManyRequest(string? translation = default, string? message = default)
-        => new(StatusCodes.Status429TooManyRequests, translation ?? string.Empty, message ?? string.Empty);
+        => new(429, translation ?? string.Empty, message ?? string.Empty);
 
     /// <summary>
     /// Creates an <see cref="Error"/> instance representing an unauthorized access error.
     /// </summary>
-    /// <returns>An <see cref="Error"/> object with a status code of <see cref="StatusCodes.Status401Unauthorized"/>  and empty
+    /// <returns>An <see cref="Error"/> object with a status code of 401 (Unauthorized) and empty
     /// message and details.</returns>
     public static Error Unauthorized()
-        => new(StatusCodes.Status401Unauthorized, string.Empty, string.Empty);
+        => new(401, string.Empty, string.Empty);
 
     /// <summary>
     /// Creates an error representing an internal server error (HTTP status code 500).
@@ -79,7 +77,7 @@ public record Error(int StatusCode, string Translation, string Description)
     /// <param name="message">An optional detailed message providing additional information about the error. If null, an empty string is used.</param>
     /// <returns>An <see cref="Error"/> instance with a status code of 500 (Internal Server Error).</returns>
     public static Error InternalServerError(string? translation = default, string? message = default)
-        => new(StatusCodes.Status500InternalServerError, translation ?? string.Empty, message ?? string.Empty);
+        => new(500, translation ?? string.Empty, message ?? string.Empty);
 
     /// <summary>
     /// Creates an error representing an internal server exception with the specified translation key and message.
@@ -89,5 +87,5 @@ public record Error(int StatusCode, string Translation, string Description)
     /// <returns>An Error object with a status code of 500 (Internal Server Error), containing the specified translation key and
     /// message.</returns>
     public static Error Exception(string translation, string message)
-        => new(StatusCodes.Status500InternalServerError, translation, message);
+        => new(500, translation, message);
 }

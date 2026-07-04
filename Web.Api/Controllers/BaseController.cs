@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using OCB.Mediator.Helper.ResultPattern;
 using OCB.Mediator.Helper.Abstractions.Sender;
 
@@ -7,22 +7,17 @@ namespace Web.Api.Controllers;
 /// <summary>
 /// Base controller for all controllers in the application.
 /// </summary>
-public class BaseController : ControllerBase
+public abstract class BaseController : ControllerBase
 {
-    protected readonly IHttpContextAccessor _httpContextAccessor;
     protected readonly ISender _sender;
 
     /// <summary>
-    /// <see cref="BaseController"/> public constructor.
+    /// <see cref="BaseController"/> protected constructor.
     /// </summary>
-    /// <param name="httpContextAccessor"></param>
     /// <param name="sender"></param>
     /// <exception cref="ArgumentNullException"></exception>
-    protected BaseController(
-        IHttpContextAccessor httpContextAccessor,
-        ISender sender)
+    protected BaseController(ISender sender)
     {
-        _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
         _sender = sender ?? throw new ArgumentNullException(nameof(sender));
     }
 
@@ -32,12 +27,17 @@ public class BaseController : ControllerBase
     /// <param name="error"></param>
     /// <returns></returns>
     protected IActionResult HandleErrorResults(Error error)
-        => error.StatusCode switch
+        => error switch
         {
-            304 => StatusCode(error.StatusCode, new { error.Translation, error.Description }),
-            400 => BadRequest(new { error.Translation, error.Description }),
-            401 => Unauthorized(),
-            404 => NotFound(new { error.Translation, error.Description }),
-            _ => StatusCode(error.StatusCode)
+            ValidationError validation
+                => BadRequest(new { validation.Translation, validation.Description, validation.Errors }),
+            _ => error.StatusCode switch
+            {
+                304 => StatusCode(error.StatusCode, new { error.Translation, error.Description }),
+                400 => BadRequest(new { error.Translation, error.Description }),
+                401 => Unauthorized(),
+                404 => NotFound(new { error.Translation, error.Description }),
+                _ => StatusCode(error.StatusCode)
+            }
         };
 }

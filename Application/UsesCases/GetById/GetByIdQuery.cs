@@ -8,4 +8,4 @@ namespace Application.UsesCases.GetById;
 /// <remarks>This query is used to request data for a specific entity identified by its <see cref="Id"/>. The
 /// response type is <see cref="GetByIdResponse"/>, which contains the details of the requested entity.</remarks>
 /// <param name="Id">The unique identifier of the entity to retrieve. Must be a valid <see cref="Guid"/>.</param>
-public sealed record GetByIdQuery(Guid Id) : IQuery<GetByIdResponse>;
+public sealed record GetByIdQuery(Guid Id) : QueryBase<GetByIdQuery, GetByIdResponse>;

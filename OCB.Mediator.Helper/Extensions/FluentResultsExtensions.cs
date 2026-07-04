@@ -29,12 +29,12 @@ public static class FluentResultsExtensions
     /// the state of the result.</returns>
     public static TReturnType Match<TReturnType, TValue>(
         this Result<TValue> result,
-        Func<object, TReturnType> success,
+        Func<TValue, TReturnType> success,
         Func<Error, TReturnType> error)
             where TValue : notnull
             where TReturnType : notnull
                 => result.IsSuccess
-                    ? success(result.GetType().Equals(typeof(Unit)) ? string.Empty : result.Value)
+                    ? success(result.Value)
                     : error(result.Error);
 
     /// <summary>

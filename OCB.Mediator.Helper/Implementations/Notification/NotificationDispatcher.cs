@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OCB.Mediator.Helper.Abstractions.Notification;
 using OCB.Mediator.Helper.Abstractions.Pipelines;
@@ -9,7 +9,6 @@ using Polly.Retry;
 using Polly.Timeout;
 using Polly.Wrap;
 using System.Diagnostics;
-using System.Reflection;
 
 namespace OCB.Mediator.Helper.Implementations.Notification;
 
@@ -18,10 +17,11 @@ namespace OCB.Mediator.Helper.Implementations.Notification;
 /// behaviors.
 /// </summary>
 /// <remarks>The <see cref="NotificationDispatcher"/> is responsible for resolving notification handlers and
-/// invoking them asynchronously. It supports retry policies for transient failures and allows the use of pipeline
-/// behaviors to modify or extend the dispatch process. This implementation uses direct reflection without caching
-/// for minimal memory footprint.</remarks>
-internal sealed class NotificationDispatcher 
+/// invoking them asynchronously. It is registered as a singleton so its resilience policies (circuit breaker,
+/// bulkhead) accumulate state across the whole application; each dispatch creates its own DI scope to resolve
+/// handlers. The resilience policy is applied per handler, so a retry never re-executes handlers that already
+/// succeeded. Handlers are resolved generically — no reflection.</remarks>
+internal sealed class NotificationDispatcher
     : INotificationDispatcher
 {
     private readonly IServiceProvider _serviceProvider;
@@ -35,11 +35,11 @@ internal sealed class NotificationDispatcher
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        // ⭐ 1. Timeout Policy
+        // ⭐ 1. Timeout Policy (optimistic: handlers must honor the CancellationToken they receive)
         AsyncTimeoutPolicy timeoutPolicy = Policy
             .TimeoutAsync(
                 timeout: TimeSpan.FromSeconds(30),
-                timeoutStrategy: TimeoutStrategy.Pessimistic,
+                timeoutStrategy: TimeoutStrategy.Optimistic,
                 onTimeoutAsync: (context, timeout, task) =>
                 {
                     _logger.LogWarning(
@@ -114,72 +114,56 @@ internal sealed class NotificationDispatcher
 
     private async Task HandleDispatchAsync<TNotification>(
         TNotification notification,
-        bool useRetry = true,
-        bool usePipeline = true,
-        CancellationToken cancellationToken = default)
+        bool useRetry,
+        bool usePipeline,
+        CancellationToken cancellationToken)
             where TNotification : INotification
     {
-        Stopwatch stopwatch = Stopwatch.StartNew();
+        long startTimestamp = Stopwatch.GetTimestamp();
 
         using IServiceScope scope = _serviceProvider.CreateScope();
 
-        Func<Task> handlerInvocation = () => DispatchToHandlersDirect(scope.ServiceProvider, notification, cancellationToken);
+        Func<Task> handlerInvocation = () => DispatchToHandlers(scope.ServiceProvider, notification, useRetry, cancellationToken);
 
         if (usePipeline)
         {
-            IEnumerable<INotificationPipelineBehavior<TNotification>> behaviors = scope.ServiceProvider
+            foreach (INotificationPipelineBehavior<TNotification> behavior in scope.ServiceProvider
                 .GetServices<INotificationPipelineBehavior<TNotification>>()
-                .Reverse();
-
-            foreach (INotificationPipelineBehavior<TNotification> behavior in behaviors)
+                .Reverse())
             {
                 Func<Task> next = handlerInvocation;
                 handlerInvocation = () => behavior.HandleAsync(notification, next, cancellationToken);
             }
         }
 
-        if (useRetry)
-            await _resiliencePolicy.ExecuteAsync(handlerInvocation);
-        else
-            await handlerInvocation();
+        await handlerInvocation();
 
-        stopwatch.Stop();
-        _logger.LogInformation("--> DispatchAsync<{NotificationType}> took {ElapsedMilliseconds} ms",
-            notification.GetType().Name, stopwatch.ElapsedMilliseconds);
+        if (_logger.IsEnabled(LogLevel.Information))
+            _logger.LogInformation("--> DispatchAsync<{NotificationType}> took {ElapsedMilliseconds} ms",
+                typeof(TNotification).Name, Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds);
     }
 
     /// <summary>
-    /// Dispatches notification to handlers using direct reflection without caching.
+    /// Resolves all handlers for the notification generically and runs them concurrently.
     /// </summary>
-    /// <remarks>This method resolves handler interface and HandleAsync method via reflection on each call,
-    /// trading performance for reduced memory usage and avoiding potential cache-related memory leaks.</remarks>
-    private async Task DispatchToHandlersDirect<TNotification>(
+    /// <remarks>When <paramref name="useRetry"/> is <see langword="true"/>, the resilience policy wraps each
+    /// handler individually so a retry only re-executes the handler that failed, never those that already
+    /// succeeded. Handlers are resolved by the static type of <typeparamref name="TNotification"/>, so notifications
+    /// must be dispatched with their concrete type.</remarks>
+    private async Task DispatchToHandlers<TNotification>(
         IServiceProvider serviceProvider,
         TNotification notification,
+        bool useRetry,
         CancellationToken cancellationToken)
         where TNotification : INotification
     {
-        Type notificationType = notification.GetType();
-
-        // Resolve handler interface through reflection (no caching)
-        Type handlerInterface = typeof(INotificationHandler<>).MakeGenericType(notificationType);
-
-        // Get HandleAsync method via reflection
-        MethodInfo handleMethod = handlerInterface.GetMethod("HandleAsync")
-            ?? throw new InvalidOperationException($"HandleAsync method not found in {handlerInterface.FullName}");
-
-        // Resolve all handlers for this notification type
-        var handlers = serviceProvider.GetServices(handlerInterface);
-
-        // Create and execute tasks for each handler
         List<Task> tasks = new();
-        foreach (object? handler in handlers)
+        foreach (INotificationHandler<TNotification> handler in serviceProvider
+            .GetServices<INotificationHandler<TNotification>>())
         {
-            if (handler == null) continue;
-
-            object? result = handleMethod.Invoke(handler, new object[] { notification, cancellationToken });
-            if (result is Task task)
-                tasks.Add(task);
+            tasks.Add(useRetry
+                ? _resiliencePolicy.ExecuteAsync(token => handler.HandleAsync(notification, token), cancellationToken)
+                : handler.HandleAsync(notification, cancellationToken));
         }
 
         // Execute all handler tasks concurrently
