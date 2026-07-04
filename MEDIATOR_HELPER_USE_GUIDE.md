@@ -1,6 +1,6 @@
 # OCB.Mediator.Helper — Usage Guide
 
-Custom lightweight mediator for CQRS. No MediatR dependency. Built on FluentValidation, Polly, and Scrutor.
+Custom lightweight mediator for CQRS. No MediatR dependency. Built on FluentValidation, Polly, and Scrutor. Targets **.NET 10** (`net10.0`).
 
 Dispatch is **reflection-free**: requests inherit from `CommandBase<TSelf, TResponse>` / `QueryBase<TSelf, TResponse>`, which recover the concrete type at compile time (double dispatch). No `MethodInfo.Invoke`, no boxing, AOT/trimming friendly.
 
@@ -20,6 +20,7 @@ Dispatch is **reflection-free**: requests inherit from `CommandBase<TSelf, TResp
 | `Sender` was registered as itself + `ISender` | Only `ISender` is registered. Inject `ISender`, never the concrete `Sender`. |
 | `ErrorHandler.*`, `ValidationResults.*`, `IValidationResult`, `RequestResultStatus` | Removed (dead code). |
 | Depended on `Microsoft.AspNetCore.Http.Abstractions` | Dependency removed — `Error` uses plain int status codes. |
+| Targeted `net9.0` | Targets `net10.0` — consuming projects must be on .NET 10. |
 
 `ISender.Send(...)` call sites do **not** change — only the request type declarations do.
 
