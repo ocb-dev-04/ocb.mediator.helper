@@ -257,6 +257,62 @@ return result.Match(
 
 ---
 
+## 4a. Optional Pattern
+
+`Optional<T>` explicitly represents whether a response **section** carries a value, replacing a
+semantic `null` (which forces every consumer to guess "not provided" vs. "intentionally empty" vs.
+"hidden"). It mirrors the `Result` pattern's API shape: `Optional.Some(...)` / `Optional.None()`,
+never a public constructor.
+
+```csharp
+// Wrapping a value
+Optional<BirthInfo> present = Optional.Some(birthInfo);   // non-generic factory, T inferred
+Optional<BirthInfo> present2 = Optional<BirthInfo>.Some(birthInfo); // generic factory, explicit T
+
+// Absence of a value — Optional.None() infers T from the assignment target
+Optional<BirthInfo> absent = Optional.None();
+Optional<BirthInfo> absent2 = Optional<BirthInfo>.None();
+
+// Implicit conversion from T
+Optional<BirthInfo> implicitPresent = birthInfo;
+
+// Read — HasValue is always the source of truth; never inspect Value first
+if (present.HasValue)
+{
+    BirthInfo value = present.Value; // NotNull when HasValue is true
+}
+```
+
+`Optional.Some(null)` throws `ArgumentNullException` — an "empty section" must always be `None()`,
+never a `Some` wrapping a null.
+
+### Where to use it
+
+Use `Optional<T>` for **optional response sections** — complex nested objects on a `*Response`/`*Dto`
+whose absence has business meaning (`BirthInfo`, `Address`, `EmergencyContact`, `Employment`…).
+
+Do **not** use it for primitive nullable properties (`string?`, `int?`, `DateTime?`, `decimal?`,
+`bool?`) that don't represent a whole business section — those keep their existing nullable
+semantics.
+
+### Serialization
+
+`Optional<T>` has no custom `System.Text.Json` converter — its two public properties (`HasValue`,
+`Value`) serialize with whatever `JsonSerializerOptions` the consuming API already uses (e.g.
+camelCase policy), producing:
+
+```json
+{ "hasValue": true, "value": { } }
+{ "hasValue": false, "value": null }
+```
+
+Because the constructor is private, deserializing `Optional<T>` back from JSON (System.Text.Json or
+Newtonsoft) requires a custom converter in the consuming project — this package intentionally ships
+none, so it has zero serializer dependencies. Add the converter where the response is actually
+(de)serialized (e.g. the API's JSON options, or a cache serialization layer), not here.
+
+---
+
 ## 5. Validation
 
 Create a FluentValidation validator for each command/query. Auto-registered via `AddValidators`.
