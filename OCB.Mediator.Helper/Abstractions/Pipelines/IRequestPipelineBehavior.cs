@@ -10,7 +10,7 @@ namespace OCB.Mediator.Helper.Abstractions.Pipelines;
 /// exception handling to be applied consistently across requests.</remarks>
 /// <typeparam name="TRequest">The type of the request being processed.</typeparam>
 /// <typeparam name="TResponse">The type of the response returned after processing the request.</typeparam>
-public interface IPipelineBehavior<TRequest, TResponse>
+public interface IRequestPipelineBehavior<TRequest, TResponse>
 {
     /// <summary>
     /// Processes the specified request and invokes the next handler in the pipeline.

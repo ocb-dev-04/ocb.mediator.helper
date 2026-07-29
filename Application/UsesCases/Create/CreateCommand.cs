@@ -10,4 +10,4 @@ namespace Application.UsesCases.Create;
 /// created.</remarks>
 /// <param name="Name"></param>
 /// <param name="Description"></param>
-public sealed record CreateCommand(string Name, string Description) : ICommand<Guid>;
+public sealed record CreateCommand(string Name, string Description) : CommandBase<CreateCommand, Guid>;

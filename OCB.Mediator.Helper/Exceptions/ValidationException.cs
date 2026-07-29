@@ -1,5 +1,3 @@
-using OCB.Mediator.Helper.ErrorHandler;
-
 namespace OCB.Mediator.Helper.Exceptions;
 
 /// <summary>
@@ -7,14 +5,15 @@ namespace OCB.Mediator.Helper.Exceptions;
 /// </summary>
 /// <remarks>This exception is typically thrown to indicate that one or more validation errors have occurred. The
 /// <see cref="Errors"/> property provides detailed information about the specific validation errors.</remarks>
-public sealed class ValidationException 
+[Obsolete("The built-in ValidationPipelineBehavior no longer throws; validation failures are returned as Result.Failure with a ResultPattern.ValidationError. This type will be removed in a future version.")]
+public sealed class ValidationException
     : Exception
 {
     /// <summary>
     /// <see cref="ValidationException"/> public constructor
     /// </summary>
     /// <param name="errors"></param>
-    public ValidationException(IEnumerable<ValidationError> errors)
+    public ValidationException(IDictionary<string, string[]> errors)
     {
         Errors = errors;
     }
@@ -22,5 +21,5 @@ public sealed class ValidationException
     /// <summary>
     /// Gets a collection of validation errors associated with the current operation or object.
     /// </summary>
-    public IEnumerable<ValidationError> Errors { get; }
+    public IDictionary<string, string[]> Errors { get; }
 }
